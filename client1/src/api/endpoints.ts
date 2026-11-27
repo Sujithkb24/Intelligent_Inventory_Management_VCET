@@ -7,6 +7,8 @@ import type {
   Alert,
   AgentAnswer,
   ApprovalIn,
+  ClarifyInput,
+  ClarifyResult,
   EventIn,
   EventResult,
   Health,
@@ -150,8 +152,21 @@ export const investigate = async (orderId: string): Promise<{ rec_id: string | n
 export const askAgent = async (question: string): Promise<AgentAnswer> => {
   const d = await data<any>(api.post('/agent/ask', { question }, { timeout: config.agentTimeoutMs }));
   return {
-    answer: typeof d === 'string' ? d : (d?.answer ?? d?.response ?? JSON.stringify(d)),
+    answer: typeof d === 'string' ? d : (d?.answer ?? d?.response ?? d?.result?.answer ?? JSON.stringify(d)),
     trace: d?.tool_trace ?? d?.trace ?? d?.evidence ?? null,
+  };
+};
+
+export const clarifyAgent = async (input: ClarifyInput): Promise<ClarifyResult> => {
+  const d = await data<any>(api.post('/agent/clarify', input, { timeout: config.agentTimeoutMs }));
+  return {
+    status: d?.status ?? 'ANSWERED',
+    session_id: d?.session_id ?? '',
+    answer: typeof d === 'string' ? d : (d?.answer ?? d?.result?.answer ?? JSON.stringify(d)),
+    questions: Array.isArray(d?.questions) ? d.questions : [],
+    interpretations: Array.isArray(d?.interpretations) ? d.interpretations : [],
+    trace: d?.trace ?? d?.tool_trace ?? null,
+    policy: d?.policy ?? null,
   };
 };
 

@@ -6,10 +6,11 @@ from app.services import inventory, procurement, risk, simulation
 
 
 class Toolbox:
-    def __init__(self, state, today, allow_draft):
+    def __init__(self, state, today, allow_draft, slots=None):
         self.state = state
         self.today = today
         self.allow_draft = allow_draft
+        self.slots = slots or {}
         self.log = []
         self.draft = None
         self.allocations, self.risks = risk.evaluate(state, today, settings.ml_enabled)

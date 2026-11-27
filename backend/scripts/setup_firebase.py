@@ -5,6 +5,7 @@ from pathlib import Path
 from app import models
 from app.config import ROOT, settings
 from app.db import get_store, now_iso, set_store
+from app.nlu.entity_resolver import seed_aliases
 from app.services import risk
 from sim.generate_data import load_demo, load_master
 
@@ -51,11 +52,12 @@ def main():
         print("Cleared application collections")
     if args.seed == "master":
         load_master(store)
-        print("Loaded master data")
+        print(f"Loaded master data and {seed_aliases(store)} NLU aliases")
     elif args.seed == "demo":
         results = load_demo(store, settings.today())
         print(f"Loaded demo data: {sum(r.status == 'APPLIED' for r in results)} events applied, "
               f"{sum(r.status == 'DUPLICATE' for r in results)} already present")
+        print(f"Loaded {seed_aliases(store)} NLU aliases")
         run = risk.run_and_store(store, actor="setup")
         print(f"Risk run {run['run_id']} stored")
 

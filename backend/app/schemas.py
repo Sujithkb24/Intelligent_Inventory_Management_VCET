@@ -126,3 +126,32 @@ class SimulationIn(BaseModel):
 
 class AskIn(BaseModel):
     question: str = Field(min_length=3, max_length=1000)
+
+
+class ClarifyIn(BaseModel):
+    question: str = Field(min_length=3, max_length=1000)
+    session_id: Optional[str] = Field(None, pattern=SAFE_ID)
+    answers: list[str] = Field(default_factory=list, max_length=2)
+
+
+class ClarificationOption(BaseModel):
+    id: str
+    label: str
+    score: Optional[float] = None
+
+
+class ClarificationQuestion(BaseModel):
+    ambiguity_type: str
+    question: str
+    field: str
+    options: list[ClarificationOption]
+
+
+class ClarifyOut(BaseModel):
+    status: Literal["ANSWERED", "CLARIFY", "REFUSED"]
+    session_id: str
+    answer: str
+    questions: list[ClarificationQuestion] = Field(default_factory=list)
+    interpretations: list[str] = Field(default_factory=list)
+    trace: Optional[list[dict]] = None
+    policy: Optional[str] = None

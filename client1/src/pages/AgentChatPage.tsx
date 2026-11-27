@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useAsk } from '../api/hooks';
+import { useClarify } from '../api/hooks';
+import type { ClarifyResult } from '../api/types';
 import { ToolTraceViewer } from '../components/agent/ToolTraceViewer';
 import { Banner, PageHeader } from '../components/common/common';
 import { toast } from '../lib/toast';
@@ -8,27 +9,36 @@ interface Msg {
   role: 'user' | 'agent';
   text: string;
   trace?: Record<string, unknown> | unknown[] | null;
+  clarify?: ClarifyResult;
+  source?: string;
 }
 
 const SUGGESTED = ['Why is O102 at risk?', 'What if SUP_A is 5 days late on MCU_AUTO?'];
 
 export default function AgentChatPage() {
-  const ask = useAsk();
+  const clarify = useClarify();
   const [q, setQ] = useState('');
   const [msgs, setMsgs] = useState<Msg[]>([]);
+  const [sessionId, setSessionId] = useState<string | undefined>(undefined);
 
-  const send = (question: string) => {
+  const send = (question: string, answers: string[] = []) => {
     const text = question.trim();
-    if (!text || ask.isPending) return;
-    setMsgs((m) => [...m, { role: 'user', text }]);
+    if (!text || clarify.isPending) return;
+    setMsgs((m) => [...m, { role: 'user', text: answers.length ? answers.join(', ') : text }]);
     setQ('');
-    ask.mutate(text, {
-      onSuccess: (r) => setMsgs((m) => [...m, { role: 'agent', text: r.answer, trace: r.trace }]),
-      onError: (e) => {
-        if (e.status !== 403) toast(e.message, 'error');
-        setMsgs((m) => [...m, { role: 'agent', text: `Error: ${e.message}` }]);
+    clarify.mutate(
+      { question: text, session_id: sessionId, answers },
+      {
+        onSuccess: (r) => {
+          setSessionId(r.session_id);
+          setMsgs((m) => [...m, { role: 'agent', text: r.answer, trace: r.trace, clarify: r, source: text }]);
+        },
+        onError: (e) => {
+          if (e.status !== 403) toast(e.message, 'error');
+          setMsgs((m) => [...m, { role: 'agent', text: `Error: ${e.message}` }]);
+        },
       },
-    });
+    );
   };
 
   return (
@@ -60,6 +70,25 @@ export default function AgentChatPage() {
             >
               {m.text}
             </div>
+            {m.clarify?.interpretations?.length ? (
+              <div className="mt-1.5 text-xs text-[var(--text-muted)]">
+                {m.clarify.interpretations.join(' ')}
+              </div>
+            ) : null}
+            {m.clarify?.questions?.map((question, qi) => (
+              <div key={qi} className="mt-2 flex flex-wrap gap-2">
+                {question.options.map((option) => (
+                  <button
+                    key={option.id}
+                    className="btn"
+                    disabled={clarify.isPending}
+                    onClick={() => send(m.source ?? '', [option.id])}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            ))}
             {m.trace && (
               <details className="mt-1.5 text-left">
                 <summary className="cursor-pointer text-xs font-medium text-[var(--purple-700)]">Tool trace</summary>
@@ -70,7 +99,7 @@ export default function AgentChatPage() {
             )}
           </div>
         ))}
-        {ask.isPending && <div className="text-sm text-[var(--text-muted)]">Agent is working (up to 8 tool calls){'…'}</div>}
+        {clarify.isPending && <div className="text-sm text-[var(--text-muted)]">Agent is working{'\u2026'}</div>}
       </div>
 
       <form
@@ -86,7 +115,7 @@ export default function AgentChatPage() {
           onChange={(e) => setQ(e.target.value)}
           placeholder="Ask about orders, materials or suppliers"
         />
-        <button className="btn btn-primary" disabled={ask.isPending || q.trim().length < 3}>
+        <button className="btn btn-primary" disabled={clarify.isPending || q.trim().length < 3}>
           Ask
         </button>
       </form>

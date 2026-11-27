@@ -218,6 +218,33 @@ export interface AgentAnswer {
   trace: Record<string, unknown> | unknown[] | null;
 }
 
+export interface ClarifyInput {
+  question: string;
+  session_id?: string;
+  answers?: string[];
+}
+
+export interface ClarificationOption {
+  id: string;
+  label: string;
+  score: number | null;
+}
+
+export interface ClarificationQuestion {
+  ambiguity_type: string;
+  question: string;
+  field: string;
+  options: ClarificationOption[];
+}
+
+export interface ClarifyResult extends AgentAnswer {
+  status: 'ANSWERED' | 'CLARIFY' | 'REFUSED';
+  session_id: string;
+  questions: ClarificationQuestion[];
+  interpretations: string[];
+  policy?: string | null;
+}
+
 export interface Health {
   [k: string]: unknown;
 }

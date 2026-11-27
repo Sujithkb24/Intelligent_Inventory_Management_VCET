@@ -6,7 +6,7 @@ from fastapi import FastAPI
 
 from app.config import settings
 from app.db import get_store
-from app.routers import agent, alerts, events, inventory, orders, recommendations, risk, simulate, suppliers
+from app.routers import agent, alerts, clarify, events, inventory, orders, recommendations, risk, simulate, suppliers
 from app.services import alerts as alert_service
 from app.services import event_stream
 from app.services import risk as risk_service
@@ -35,9 +35,11 @@ def drain_event_outbox():
 async def lifespan(app):
     store = get_store()
     if settings.store == "memory":
+        from app.nlu.entity_resolver import seed_aliases
         from sim.generate_data import load_demo
 
         load_demo(store, settings.today())
+        seed_aliases(store)
         risk_service.run_and_store(store)
     scheduler = None
     if settings.scan_minutes > 0 or settings.kafka_bootstrap_servers:
@@ -66,5 +68,5 @@ if settings.cors_origins:
         allow_headers=["Authorization", "Content-Type", "X-API-Key"],
     )
 
-for module in (events, inventory, orders, risk, simulate, suppliers, agent, recommendations, alerts):
+for module in (events, inventory, orders, risk, simulate, suppliers, agent, clarify, recommendations, alerts):
     app.include_router(module.router, prefix="/api/v1")

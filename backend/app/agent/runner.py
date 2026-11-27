@@ -26,7 +26,7 @@ def pending_calls(message):
     return [b for b in message["content"] if b.get("type") == "tool_use"]
 
 
-def build_graph(store, toolbox, policy, mode, question, actor):
+def build_graph(store, toolbox, policy, mode, question, actor, extra_text=""):
     def agent_node(state):
         try:
             message = policy.next(state["messages"], toolbox.log)
@@ -55,7 +55,8 @@ def build_graph(store, toolbox, policy, mode, question, actor):
         elif toolbox.draft:
             errors = guardrails.final_errors(final, toolbox.draft, toolbox.log)
         elif mode == "ask":
-            errors = guardrails.grounding_errors(final, toolbox.log, question)
+            errors = guardrails.grounding_errors(final, toolbox.log,
+                                                 " ".join(v for v in (question, extra_text) if v))
         else:
             errors = guardrails.grounding_errors(final, toolbox.log)
         if errors and state["revisions"] < 1:
@@ -119,10 +120,13 @@ def build_graph(store, toolbox, policy, mode, question, actor):
     return graph.compile()
 
 
-def execute(store, mode, target, prompt, actor):
-    toolbox = Toolbox(inventory.load_state(store), settings.today(), allow_draft=mode == "investigate")
-    policy = build_policy(toolbox, mode, target)
-    graph = build_graph(store, toolbox, policy, mode, prompt, actor)
+def execute(store, mode, target, prompt, actor, slots=None):
+    slots = slots or {}
+    extra_text = " ".join(str(slots[key]) for key in
+                          ("qty", "delay_days", "as_of", "start_date", "end_date") if key in slots)
+    toolbox = Toolbox(inventory.load_state(store), settings.today(), allow_draft=mode == "investigate", slots=slots)
+    policy = build_policy(toolbox, mode, target, slots=slots)
+    graph = build_graph(store, toolbox, policy, mode, prompt, actor, extra_text)
     start = {"messages": [{"role": "user", "content": prompt}], "tool_calls": 0, "revisions": 0, "errors": []}
     outcome = graph.invoke(start, {"recursion_limit": 40})["outcome"]
     if hasattr(policy, "usage"):
@@ -159,5 +163,5 @@ def investigate(store, order_id, actor):
     return execute(store, "investigate", order_id, prompt, actor)
 
 
-def ask(store, question, actor):
-    return execute(store, "ask", question, question, actor)
+def ask(store, question, actor, slots=None):
+    return execute(store, "ask", question, question, actor, slots=slots)

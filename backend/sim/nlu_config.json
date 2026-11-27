@@ -1,0 +1,34 @@
+{
+  "synonyms": [
+    { "alias": "mcu", "entity_type": "MATERIAL", "entity_id": "MCU_AUTO", "weight": 0.95 },
+    { "alias": "mcu", "entity_type": "MATERIAL", "entity_id": "MCU_AUTO_B", "weight": 0.95 },
+    { "alias": "chip", "entity_type": "MATERIAL", "entity_id": "MCU_AUTO", "weight": 0.92 },
+    { "alias": "chip", "entity_type": "MATERIAL", "entity_id": "MCU_AUTO_B", "weight": 0.92 },
+    { "alias": "controller", "entity_type": "MATERIAL", "entity_id": "CTRL_INV", "weight": 0.9 },
+    { "alias": "battery pack", "entity_type": "MATERIAL", "entity_id": "PACK_3K", "weight": 0.94 },
+    { "alias": "battery", "entity_type": "MATERIAL", "entity_id": "PACK_3K", "weight": 0.88 },
+    { "alias": "battery", "entity_type": "MATERIAL", "entity_id": "BATT_LFP", "weight": 0.86 },
+    { "alias": "cells", "entity_type": "MATERIAL", "entity_id": "CELL_21700", "weight": 0.94 },
+    { "alias": "cell", "entity_type": "MATERIAL", "entity_id": "CELL_21700", "weight": 0.92 },
+    { "alias": "charger", "entity_type": "MATERIAL", "entity_id": "OBC_33", "weight": 0.9 },
+    { "alias": "screen", "entity_type": "MATERIAL", "entity_id": "DISPLAY_TFT", "weight": 0.9 },
+    { "alias": "scooter", "entity_type": "PRODUCT", "entity_id": "SCOOT_S", "weight": 0.9 },
+    { "alias": "scooter", "entity_type": "PRODUCT", "entity_id": "SCOOT_P", "weight": 0.9 },
+    { "alias": "scooter", "entity_type": "PRODUCT", "entity_id": "SCOOT_X", "weight": 0.9 }
+  ],
+  "intents": [
+    { "name": "investigate", "access": "read", "phrases": ["why", "risk", "late", "short", "status", "check", "bottleneck", "shortage"] },
+    { "name": "simulate", "access": "read", "phrases": ["what if", "simulate", "supplier delay", "delayed by", "delay days", "late by"] },
+    { "name": "draft_po", "access": "write", "phrases": ["draft", "create po", "create a po", "draft a po", "purchase order", "order a", "raise po", "approve", "approval"] }
+  ],
+  "ambiguous_intent_phrases": ["handle", "fix", "sort out", "deal with"],
+  "reference_phrases": ["it", "that", "this order", "that order", "same supplier", "that supplier", "their po", "the po"],
+  "scope_phrases": ["one order", "all orders", "pack level", "cell level", "battery pack", "cells"],
+  "temporal_phrases": ["today", "tomorrow", "next week", "this week", "by friday", "by monday", "soon", "later", "next month"],
+  "delay_units": ["days", "day", "weeks", "week"],
+  "unit_multipliers": { "k": 1000, "thousand": 1000, "kwh": 1, "kwhs": 1 },
+  "pack_units": ["tray", "pack", "box", "reel"],
+  "delay_options": [1, 5, 10, 30],
+  "fuzzy_cutoff": 0.45,
+  "stopwords": ["what", "if", "the", "a", "an", "is", "are", "was", "were", "be", "on", "in", "at", "to", "for", "by", "of", "with", "and", "or", "from", "about", "why", "how", "much", "many", "do", "does", "did", "can", "could", "would", "should", "there", "it", "that", "this", "same", "supplier", "order", "material", "next", "week", "day", "days", "late", "risk", "short", "shortage", "status", "check", "handle", "fix", "sort", "out", "draft", "create", "po", "purchase", "raise", "approve", "approval"]
+}

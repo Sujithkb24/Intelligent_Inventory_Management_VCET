@@ -59,6 +59,11 @@ class Settings:
     kafka_topic: str = env("KAFKA_TOPIC", "inventory.events")
     redis_url: str = env("REDIS_URL")
     redis_cache_ttl: int = env_num("REDIS_CACHE_TTL", "5")
+    nlu_config_file: str = env("NLU_CONFIG_FILE", str(ROOT / "sim" / "nlu_config.json"))
+    nlu_confidence: float = env_num("NLU_CONFIDENCE", "0.90", float)
+    nlu_margin: float = env_num("NLU_MARGIN", "0.25", float)
+    nlu_max_questions: int = env_num("NLU_MAX_QUESTIONS", "2")
+    nlu_session_ttl_minutes: int = env_num("NLU_SESSION_TTL_MINUTES", "60")
 
     def today(self):
         return date.fromisoformat(self.today_override) if self.today_override else date.today()

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient, type UseQueryO
 import * as E from './endpoints';
 import { config } from '../config';
 import type { ApiError } from './client';
-import type { ApprovalIn, EventIn, SimulationIn } from './types';
+import type { ApprovalIn, ClarifyInput, EventIn, SimulationIn } from './types';
 
 type Opts<T> = Omit<UseQueryOptions<T, ApiError>, 'queryKey' | 'queryFn'>;
 
@@ -97,6 +97,11 @@ export function useInvestigate() {
 }
 
 export const useAsk = () => useMutation<Awaited<ReturnType<typeof E.askAgent>>, ApiError, string>({ mutationFn: E.askAgent, retry: false });
+
+export const useClarify = () => useMutation<Awaited<ReturnType<typeof E.clarifyAgent>>, ApiError, ClarifyInput>({
+  mutationFn: E.clarifyAgent,
+  retry: false,
+});
 
 export function useDecide(id: string) {
   const qc = useQueryClient();

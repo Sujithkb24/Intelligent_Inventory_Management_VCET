@@ -24,11 +24,13 @@ def parse_json(text):
 class ClaudePolicy:
     name = "claude"
 
-    def __init__(self, toolbox, mode):
+    def __init__(self, toolbox, mode, slots=None):
         from anthropic import Anthropic
 
         self.client = Anthropic(api_key=settings.anthropic_key, timeout=60)
         self.system = SYSTEM_PROMPT if mode == "investigate" else ASK_PROMPT
+        if slots:
+            self.system += "\nValidated canonical slots: " + json.dumps(slots, default=str)
         self.specs = [s for s in SPECS if s["name"] in toolbox.names()]
         self.usage = {"requests": 0, "input_tokens": 0, "output_tokens": 0}
 
@@ -45,10 +47,11 @@ class ClaudePolicy:
 class RulePolicy:
     name = "rules"
 
-    def __init__(self, toolbox, mode, target):
+    def __init__(self, toolbox, mode, target, slots=None):
         self.toolbox = toolbox
         self.mode = mode
         self.target = target
+        self.slots = slots or {}
 
     def next(self, messages, log):
         step = self.investigate(log) if self.mode == "investigate" else self.ask(log)
@@ -109,14 +112,27 @@ class RulePolicy:
     def ask(self, log):
         text = self.target
         state = self.toolbox.state
-        order = next((o for o in state.orders if re.search(rf"\b{re.escape(o)}\b", text, re.I)), None)
-        material = next((m for m in state.materials if re.search(rf"\b{re.escape(m)}\b", text, re.I)), None)
-        supplier = next((s for s, row in state.suppliers.items()
-                         if s.lower() in text.lower() or row.get("name", s).lower() in text.lower()), None)
-        days = re.search(r"(\d+)\s*days?", text, re.I)
+        order = self.slots.get("order_id") or next(
+            (o for o in state.orders if re.search(rf"\b{re.escape(o)}\b", text, re.I)), None)
+        material = self.slots.get("material_id") or next(
+            (m for m in state.materials if re.search(rf"\b{re.escape(m)}\b", text, re.I)), None)
+        supplier = self.slots.get("supplier_id") or next((s for s, row in state.suppliers.items()
+                                                          if s.lower() in text.lower()
+                                                          or row.get("name", s).lower() in text.lower()), None)
+        po_id = self.slots.get("po_id")
+        days = self.slots.get("delay_days")
+        if days is None:
+            match = re.search(r"(\d+)\s*days?", text, re.I)
+            days = int(match.group(1)) if match else None
         if not log:
-            if days and (supplier or material):
-                delay = {"delay_days": int(days.group(1)), "supplier_id": supplier, "material_id": material}
+            if days is not None and (supplier or material or po_id):
+                delay = {"delay_days": int(days)}
+                if supplier:
+                    delay["supplier_id"] = supplier
+                if material:
+                    delay["material_id"] = material
+                if po_id:
+                    delay["po_id"] = po_id
                 return {"call": ("simulate_what_if", {"supplier_delays": [delay]})}
             if order:
                 return {"call": ("get_order_status", {"order_id": order})}
@@ -142,6 +158,8 @@ class RulePolicy:
         return {"final": {"answer": answer, "evidence_refs": [entry["tool"]]}}
 
 
-def build_policy(toolbox, mode, target):
+def build_policy(toolbox, mode, target, slots=None):
     use_claude = settings.llm_provider == "claude" or (settings.llm_provider == "auto" and settings.anthropic_key)
-    return ClaudePolicy(toolbox, mode) if use_claude else RulePolicy(toolbox, mode, target)
+    if use_claude:
+        return ClaudePolicy(toolbox, mode, slots=slots)
+    return RulePolicy(toolbox, mode, target, slots=slots)
