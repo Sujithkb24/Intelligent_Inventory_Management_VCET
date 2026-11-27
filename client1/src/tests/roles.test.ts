@@ -23,6 +23,11 @@ describe('permission matrix', () => {
     }
   });
 
+  it('planner_lead can approve recommendations', () => {
+    expect(can('planner_lead', 'decide_rec')).toBe(true);
+    expect(can('planner_lead', 'run_agent')).toBe(true);
+  });
+
   it('only admin has admin tools; inventory_manager cannot see orders', () => {
     expect(can('admin', 'admin_tools')).toBe(true);
     expect(can('procurement_officer', 'admin_tools')).toBe(false);

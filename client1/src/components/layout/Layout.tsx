@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/AuthContext';
 import type { Permission } from '../../auth/roles';
 import { useAlerts, useHealth } from '../../api/hooks';
 import { ToastHost } from '../common/common';
+import { toast } from '../../lib/toast';
 
 const NAV: { to: string; label: string; perm: Permission }[] = [
   { to: '/', label: 'Dashboard', perm: 'view_dashboard' },
@@ -68,7 +69,7 @@ function HealthPill({ enabled }: { enabled: boolean }) {
 function Topbar() {
   const { session, logout } = useAuth();
   const nav = useNavigate();
-  const alerts = useAlerts(session?.role);
+  const alerts = useAlerts(session?.role ?? undefined);
   const open = (alerts.data ?? []).filter((a) => (a.status ?? 'OPEN').toUpperCase() === 'OPEN').length;
   return (
     <header className="flex items-center justify-between border-b border-slate-200 bg-white px-4 py-2">
@@ -81,12 +82,11 @@ function Topbar() {
           {open > 0 && <span className="rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">{open}</span>}
         </button>
         <span className="text-sm text-slate-600">{session?.user}</span>
-        {session && <RoleBadge role={session.role} />}
+        {session?.role && <RoleBadge role={session.role} />}
         <button
           className="btn"
           onClick={() => {
-            logout();
-            nav('/login');
+            logout().then(() => nav('/login')).catch((error: unknown) => toast(String(error), 'error'));
           }}
         >
           Sign out

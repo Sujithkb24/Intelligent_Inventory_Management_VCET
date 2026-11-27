@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import threading
 import uuid
@@ -149,6 +150,67 @@ class FirestoreStore:
         return run(self.client.transaction())
 
 
+class CachedStore:
+    def __init__(self, store, client, ttl, namespace):
+        if ttl <= 0:
+            raise ValueError("REDIS_CACHE_TTL must be a positive number of seconds")
+        self.store = store
+        self.client = client
+        self.ttl = ttl
+        self.namespace = namespace
+        self.version_key = f"ev-inventory:{namespace}:cache-version"
+        self.client.setnx(self.version_key, "0")
+
+    def _key(self, kind, collection, doc_id):
+        version = self.client.get(self.version_key)
+        filters = json.dumps(doc_id, sort_keys=True, separators=(",", ":"))
+        return f"ev-inventory:{self.namespace}:{version}:{kind}:{collection}:{filters}"
+
+    def get(self, collection, doc_id):
+        key = self._key("get", collection, doc_id)
+        cached = self.client.get(key)
+        if cached is not None:
+            value = json.loads(cached)
+            return value.get("data") if value["found"] else None
+        result = self.store.get(collection, doc_id)
+        self.client.setex(key, self.ttl, json.dumps({"found": result is not None, "data": result}))
+        return result
+
+    def list(self, collection, **filters):
+        key = self._key("list", collection, filters)
+        cached = self.client.get(key)
+        if cached is not None:
+            return json.loads(cached)
+        result = self.store.list(collection, **filters)
+        self.client.setex(key, self.ttl, json.dumps(result))
+        return result
+
+    def _invalidate(self):
+        self.client.incr(self.version_key)
+
+    def set(self, collection, doc_id, data):
+        self.store.set(collection, doc_id, data)
+        self._invalidate()
+
+    def delete(self, collection, doc_id):
+        self.store.delete(collection, doc_id)
+        self._invalidate()
+
+    def clear(self, collection):
+        self.store.clear(collection)
+        self._invalidate()
+
+    def set_many(self, collection, docs):
+        self.store.set_many(collection, docs)
+        if docs:
+            self._invalidate()
+
+    def atomic(self, fn):
+        result = self.store.atomic(fn)
+        self._invalidate()
+        return result
+
+
 _store = None
 
 
@@ -159,6 +221,13 @@ def get_store():
             _store = MemoryStore()
         else:
             _store = FirestoreStore(settings.project_id, settings.credentials, settings.prefix)
+        if settings.redis_url:
+            import redis
+
+            client = redis.Redis.from_url(settings.redis_url, decode_responses=True)
+            client.ping()
+            namespace = ":".join(value for value in (settings.store, settings.project_id, settings.prefix) if value)
+            _store = CachedStore(_store, client, settings.redis_cache_ttl, namespace)
     return _store
 
 

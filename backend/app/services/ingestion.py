@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from pydantic import ValidationError
 
 from app import models
+from app.config import settings
 from app.db import now_iso
 from app.schemas import EventIn, EventResult
 
@@ -150,6 +151,10 @@ def apply_event(store, ev):
             "event_id": ev.event_id, "event_type": ev.event_type, "payload": ev.model_dump_json(),
             "source": ev.source, "event_ts": ev.timestamp.isoformat(), "status": status,
             "error": error, "received_at": now_iso()})
+        if status == "APPLIED" and settings.kafka_bootstrap_servers:
+            tx.set(models.EVENT_OUTBOX, ev.event_id, {
+                "event_id": ev.event_id, "payload": ev.model_dump(mode="json"),
+                "status": "PENDING", "created_at": now_iso()})
         return EventResult(event_id=ev.event_id, status=status, error=error)
 
     return store.atomic(run)

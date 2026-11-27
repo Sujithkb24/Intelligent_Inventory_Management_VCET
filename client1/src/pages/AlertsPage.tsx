@@ -30,7 +30,7 @@ const SEV: Record<string, string> = {
 
 export default function AlertsPage() {
   const { session, can } = useAuth();
-  const q = useAlerts(session?.role);
+  const q = useAlerts(session?.role ?? undefined);
   const ack = useAckAlert();
   return (
     <div>

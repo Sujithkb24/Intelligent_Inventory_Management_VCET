@@ -13,7 +13,7 @@ export default function DashboardPage() {
   const { session, can } = useAuth();
   const risk = useLatestRisk(can('view_orders'));
   const shortages = useShortages();
-  const alerts = useAlerts(session?.role);
+  const alerts = useAlerts(session?.role ?? undefined);
   const recs = useRecs('PENDING', can('view_recs'));
   const run = useRunRisk();
 

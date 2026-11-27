@@ -37,6 +37,9 @@ class Settings:
     credentials: str = env("FIREBASE_CREDENTIALS")
     prefix: str = env("COLLECTION_PREFIX")
     api_key: str = env("API_KEY")
+    auth_mode: str = env("AUTH_MODE", "firebase")
+    role_claim: str = env("FIREBASE_ROLE_CLAIM", "role")
+    cors_origins: str = env("CORS_ORIGINS")
     llm_provider: str = env("LLM_PROVIDER", "auto")
     anthropic_key: str = env("ANTHROPIC_API_KEY")
     model: str = env("ANTHROPIC_MODEL", "claude-sonnet-5-5")
@@ -52,6 +55,10 @@ class Settings:
     duplicate_threshold: int = env_num("DUPLICATE_THRESHOLD", "50")
     keep_runs: int = env_num("KEEP_RUNS", "5")
     today_override: str = env("TODAY")
+    kafka_bootstrap_servers: str = env("KAFKA_BOOTSTRAP_SERVERS")
+    kafka_topic: str = env("KAFKA_TOPIC", "inventory.events")
+    redis_url: str = env("REDIS_URL")
+    redis_cache_ttl: int = env_num("REDIS_CACHE_TTL", "5")
 
     def today(self):
         return date.fromisoformat(self.today_override) if self.today_override else date.today()

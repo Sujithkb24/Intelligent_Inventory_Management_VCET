@@ -8,31 +8,41 @@ FastAPI backend with Firestore, a LangGraph procurement agent, deterministic all
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-STORE=memory uvicorn app.main:app --reload
+cp .env.example .env
+AUTH_MODE=demo STORE=memory uvicorn app.main:app --reload
 ```
 
-On Windows use `.venv\Scripts\activate`, then `$env:STORE="memory"` before `uvicorn`. Open http://127.0.0.1:8000/docs. Memory mode loads demo data and loses everything on restart.
+On Windows activate with `.venv\Scripts\Activate.ps1`, copy `.env.example` to `.env`, and set `STORE=memory` and `AUTH_MODE=demo` in `.env` before running `uvicorn app.main:app --reload`. Open http://127.0.0.1:8000/docs. Memory/demo mode loads sample data and loses everything on restart. It trusts `X-User` and `X-Role` headers and must never be exposed publicly.
 
 ## Firebase setup
 
-1. Create a project at https://console.firebase.google.com.
-2. Open Firestore Database, create a database (Native mode, default database, production mode).
-3. Open Project settings, Service accounts, Generate new private key. Save the file as `serviceAccountKey.json` in this folder. Never commit it.
-4. `cp .env.example .env` and set `FIREBASE_PROJECT_ID`.
-5. Verify the connection and load demo data:
+1. Create a project at https://console.firebase.google.com and enable Email/Password in Authentication > Sign-in method.
+2. Create a Firestore database in Native mode.
+3. In Project settings > Service accounts, generate a private key. Save it as `serviceAccountKey.json` in this folder. Never commit or share it.
+4. Copy `.env.example` to `.env`; set `FIREBASE_PROJECT_ID`, `FIREBASE_CREDENTIALS=serviceAccountKey.json`, and `AUTH_MODE=firebase`. Keep `STORE=firestore`.
+5. Verify Firestore and load demo data:
 
 ```bash
 python -m scripts.setup_firebase
 ```
 
-6. Deploy the security rules, which block all direct client access (the backend uses the Admin SDK and is not affected):
+6. Create accounts in Firebase Authentication and assign trusted roles using each user's Authentication UID:
+
+```bash
+python -m scripts.set_firebase_role FIREBASE_AUTH_UID production_planner
+```
+
+Supported roles: `inventory_manager`, `production_planner`, `procurement_officer`, `planner_lead`, `admin`. The command preserves other claims; users must sign out and back in after a role update. Never allow users to assign their own role.
+
+7. In `client1/.env`, configure `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID` from Project settings > General > Your apps. The web API key is public; do not put the service-account key in the frontend.
+8. Deploy the security rules, which block all direct client access (the backend uses the Admin SDK and is not affected):
 
 ```bash
 npx firebase-tools login
 npx firebase-tools deploy --only firestore --project YOUR_PROJECT_ID
 ```
 
-7. `uvicorn app.main:app`
+9. Run `uvicorn app.main:app` from this folder and `npm run dev` from `client1`.
 
 Setup options: `--seed demo|master|none`, and `--reset --confirm-project YOUR_PROJECT_ID`, which deletes all application data.
 
@@ -46,15 +56,30 @@ Free tier: every risk run reads all master data, balances, open POs and orders. 
 |---|---|
 | STORE | `firestore` or `memory` |
 | API_KEY | If set, requests also need `X-API-Key` |
+| AUTH_MODE | `firebase` (default) verifies bearer tokens and trusted role claims; `demo` is restricted to `STORE=memory` |
+| FIREBASE_ROLE_CLAIM | Custom claim name containing the user's role; defaults to `role` |
+| CORS_ORIGINS | Optional comma-separated browser origins |
 | LLM_PROVIDER | `auto`, `claude` or `rules` |
 | ANTHROPIC_API_KEY | Enables the Claude-driven agent (paid API) |
 | ML_ENABLED | Use trained models when present |
 | SCAN_MINUTES, AUTO_RECOMPUTE | Risk recompute behaviour |
 | RISK_BUFFER_DAYS, PO_BUFFER_PCT | Engine settings |
+| KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC | Optional Kafka/Redpanda stream for applied events; Firestore outbox delivers at-least-once |
+| REDIS_URL, REDIS_CACHE_TTL | Optional Redis cache for store reads; writes invalidate cached reads |
+
+### Kafka and Redis
+
+Start local Redis and Redpanda (Kafka API) from this folder:
+
+```bash
+docker compose up -d redis redpanda
+```
+
+Set `REDIS_URL=redis://localhost:6379/0` and `KAFKA_BOOTSTRAP_SERVERS=localhost:19092` in `backend/.env`, then start the backend. Kafka messages include the source event and use its `event_id` as the message key; consumers should deduplicate because outbox delivery is at-least-once. Redis is optional. If configured but unreachable, startup fails explicitly instead of silently bypassing the cache.
 
 ## Demo
 
-Every request needs `X-User` and `X-Role` headers. Base path `/api/v1`.
+In local demo mode, requests use `X-User` and `X-Role` headers. Firebase mode requires `Authorization: Bearer <Firebase ID token>`; the backend derives identity and role from the verified token. Base path `/api/v1`.
 
 | Step | Request | Role |
 |---|---|---|
@@ -106,7 +131,18 @@ Measured on synthetic data with TODAY=2026-11-27:
 | Order risk, with delay model | precision 0.91, recall 0.71, F1 0.80, ship-date MAE 1.89 days |
 | Material shortages (35 true) | rules found 26, with delay model 31 (5 false flags) |
 
-The reorder-level baseline flagged nothing in a single day-0 snapshot, so it is not a meaningful comparison. A rolling day-by-day baseline is not implemented.
+`python -m sim.run_experiment` also reports rolling day-by-day baseline and forecast detection counts, misses, mean/median lead days, and difference in mean lead. The discrete-day simulator consumes demand on the calculated material-need-by date and uses generated actual PO delay for ground truth; this remains synthetic, not a production measurement.
+
+On the default 10 scenarios (seed 300-309, TODAY=2026-11-27), the reorder baseline detected 35/35 true shortages with 39.2 mean lead days, but also raised 68 false flags. The forecast detector caught 33/35 (2 late, no false flags), with 54.82 mean lead days; across the 33 shortages both detected, it warned an average 15.06 days earlier. These are synthetic results, not a claim about real operational inventory.
+
+Run the opt-in live agent evaluation only after configuring `ANTHROPIC_API_KEY`:
+
+```bash
+python -m sim.evaluate_agent
+python -m sim.evaluate_agent --cases 1
+```
+
+This makes real, billable Claude requests on seeded demo data. The JSON report checks tool grounding, task outcomes, token usage, and verifies that an investigation creates only a PENDING recommendation (no purchase order is placed without human approval). It exits non-zero if an evaluation or safety check fails.
 
 ## Layout
 
@@ -120,10 +156,8 @@ tests/      pytest
 ## Limitations
 
 - Data is synthetic, and the delay distributions were designed for this project.
-- `X-User` and `X-Role` are trusted as sent. Do not expose publicly without real authentication.
+- Firebase ID tokens and server-issued role claims are required by default. `AUTH_MODE=demo` trusts role headers and must remain local-only.
 - One production line, no holiday calendar.
 - Replay is not atomic; run it while ingestion is paused.
 - Concurrent investigations of the same shortage can create two drafts. Review the queue before approving.
-- Detection lead time compared with the baseline and a full-system agent evaluation with a real LLM are not implemented.
-- Kafka, Redis and Docker (the blueprint's final phase) are not included.
 - Supplier quotes and dates must be verified by a person.

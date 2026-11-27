@@ -125,6 +125,8 @@ def execute(store, mode, target, prompt, actor):
     graph = build_graph(store, toolbox, policy, mode, prompt, actor)
     start = {"messages": [{"role": "user", "content": prompt}], "tool_calls": 0, "revisions": 0, "errors": []}
     outcome = graph.invoke(start, {"recursion_limit": 40})["outcome"]
+    if hasattr(policy, "usage"):
+        outcome["llm_usage"] = policy.usage
     if outcome["status"] == "FAILED":
         ref = hashlib.sha256(target.encode()).hexdigest()[:16]
         alerts.raise_alert(store, "AGENT_FAILURE", "MEDIUM", "; ".join(outcome["errors"])[:300], ref)
