@@ -12,12 +12,14 @@ function HealthTab() {
   const entries = Object.entries(q.data ?? {});
   return (
     <div className="card">
-      <p className="mb-2 text-xs text-slate-500">Refreshes every 10 s.</p>
-      <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <p className="mb-3 text-xs text-[var(--text-muted)]">Refreshes every 10 s.</p>
+      <dl className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {entries.map(([k, v]) => (
           <div key={k}>
             <dt className="label">{k.replace(/_/g, ' ')}</dt>
-            <dd className="text-sm">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</dd>
+            <dd className="text-sm font-medium text-[var(--text-primary)]">
+              {typeof v === 'object' ? JSON.stringify(v) : String(v)}
+            </dd>
           </div>
         ))}
       </dl>
@@ -43,7 +45,7 @@ function ReplayTab() {
       onSuccess: (r) => {
         const d = r as { checksum?: string };
         const c = d?.checksum ?? JSON.stringify(r);
-        setPrevious((p) => (checksum ?? p));
+        setPrevious((p) => checksum ?? p);
         setChecksum(c);
         try {
           localStorage.setItem(CHECKSUM_KEY, c);
@@ -57,26 +59,34 @@ function ReplayTab() {
   };
 
   return (
-    <div className="card space-y-3">
-      <p className="text-sm text-slate-600">Rebuilds state from the event log. Run it twice and compare checksums to demonstrate replay consistency.</p>
-      <button className="btn btn-danger" disabled={replay.isPending} onClick={() => setConfirm(true)}>
-        {replay.isPending ? 'Replaying…' : 'Replay events'}
-      </button>
+    <div className="card space-y-4">
+      <p className="text-sm text-[var(--text-secondary)]">
+        Rebuilds state from the event log. Run it twice and compare checksums to demonstrate replay consistency.
+      </p>
+      <div>
+        <button className="btn btn-danger" disabled={replay.isPending} onClick={() => setConfirm(true)}>
+          {replay.isPending ? 'Replaying…' : 'Replay events'}
+        </button>
+      </div>
       {checksum && (
         <div className="space-y-2 text-sm">
           <div>
-            Checksum: <code className="rounded bg-slate-100 px-1">{checksum}</code>
+            Checksum: <code className="rounded-[6px] bg-[var(--bg)] px-2 py-0.5 font-mono text-xs">{checksum}</code>
           </div>
           {previous && (
             <Banner tone={previous === checksum ? 'green' : 'amber'}>
-              {previous === checksum ? 'Matches the previous checksum: replay is consistent.' : `Differs from previous checksum (${previous}).`}
+              {previous === checksum
+                ? 'Matches the previous checksum: replay is consistent.'
+                : `Differs from previous checksum (${previous}).`}
             </Banner>
           )}
         </div>
       )}
       {confirm && (
         <Modal title="Confirm replay" onClose={() => setConfirm(false)}>
-          <p className="mb-3 text-sm">This rebuilds inventory and allocations from the event log. Continue?</p>
+          <p className="mb-4 text-sm text-[var(--text-secondary)]">
+            This rebuilds inventory and allocations from the event log. Continue?
+          </p>
           <div className="flex justify-end gap-2">
             <button className="btn" onClick={() => setConfirm(false)}>
               Cancel
@@ -100,21 +110,30 @@ function QuarantineTab() {
           <EmptyState title="Quarantine is empty" />
         ) : (
           <div className="card overflow-x-auto p-0">
-            <table className="w-full">
+            <table className="w-full border-collapse">
+              <caption className="sr-only">Quarantined rejected events</caption>
               <thead>
                 <tr>
-                  <th className="th">Event</th>
-                  <th className="th">Error</th>
-                  <th className="th">Payload</th>
+                  <th scope="col" className="th">
+                    Event
+                  </th>
+                  <th scope="col" className="th">
+                    Error
+                  </th>
+                  <th scope="col" className="th">
+                    Payload
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={`${r.event_id}-${i}`}>
-                    <td className="td">{r.event_id}</td>
-                    <td className="td text-red-700">{r.error ?? ''}</td>
+                  <tr key={`${r.event_id}-${i}`} className="table-row">
+                    <td className="td font-mono text-[13px] font-medium text-[var(--text-primary)]">{r.event_id}</td>
+                    <td className="td text-[#B42318]">{r.error ?? ''}</td>
                     <td className="td">
-                      <pre className="max-w-md overflow-auto text-xs">{JSON.stringify(r.payload ?? r.raw ?? r, null, 1)}</pre>
+                      <pre className="max-w-md overflow-auto font-mono text-xs">
+                        {JSON.stringify(r.payload ?? r.raw ?? r, null, 1)}
+                      </pre>
                     </td>
                   </tr>
                 ))}

@@ -6,7 +6,7 @@ import { ToolTraceViewer } from '../components/agent/ToolTraceViewer';
 import { ApprovalDialog } from '../components/approval/ApprovalDialog';
 import { Banner, PageHeader, QueryBoundary, StatusBadge } from '../components/common/common';
 import { config } from '../config';
-import { fmtDate, fmtDateTime, fmtMoney, fmtNum } from '../lib/format';
+import { fmtDisplayDate, fmtDisplayDateTime, fmtMoney, fmtNum } from '../lib/format';
 import type { Recommendation } from '../api/types';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -49,54 +49,58 @@ export default function RecommendationDetailPage() {
           const warn = warnings(rec);
           const approver = rec.approver ?? rec.approved_by;
           return (
-            <>
-              {failed ? (
-                <Banner tone="red">Grounding failure: numbers could not be verified against tool outputs. Approval is disabled.</Banner>
-              ) : (
-                <Banner tone="green">All numbers grounded in tool outputs</Banner>
-              )}
-              {warn.map((w) => (
-                <Banner key={w} tone="amber">
-                  {w}
-                </Banner>
-              ))}
+            <div className="space-y-5">
+              <div>
+                {failed ? (
+                  <Banner tone="red">
+                    Grounding failure: numbers could not be verified against tool outputs. Approval is disabled.
+                  </Banner>
+                ) : (
+                  <Banner tone="green">All numbers grounded in tool outputs</Banner>
+                )}
+                {warn.map((w) => (
+                  <Banner key={w} tone="amber">
+                    {w}
+                  </Banner>
+                ))}
+              </div>
 
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-5 lg:grid-cols-2">
                 <div className="card">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h2 className="font-semibold">Purchase order draft</h2>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-[var(--text-primary)]">Purchase order draft</h2>
                     <StatusBadge status={rec.status} />
                   </div>
-                  <dl className="grid grid-cols-2 gap-3 text-sm">
+                  <dl className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <dt className="label">Material</dt>
                       <dd>
-                        <Link className="text-indigo-600 underline" to={`/inventory/${rec.material_id}`}>
+                        <Link className="link-id" to={`/inventory/${rec.material_id}`}>
                           {rec.material_id}
                         </Link>
                       </dd>
                     </div>
                     <div>
                       <dt className="label">Supplier</dt>
-                      <dd>{rec.supplier_id}</dd>
+                      <dd className="font-medium text-[var(--text-primary)]">{rec.supplier_id}</dd>
                     </div>
                     <div>
                       <dt className="label">Quantity (MOQ / pack rounded)</dt>
-                      <dd>{fmtNum(rec.qty)}</dd>
+                      <dd className="font-medium tabular-nums text-[var(--text-primary)]">{fmtNum(rec.qty)}</dd>
                     </div>
                     <div>
                       <dt className="label">Needed by</dt>
-                      <dd>{fmtDate(rec.needed_by)}</dd>
+                      <dd className="font-medium tabular-nums text-[var(--text-primary)]">{fmtDisplayDate(rec.needed_by)}</dd>
                     </div>
                     <div>
                       <dt className="label">Estimated cost</dt>
-                      <dd>{fmtMoney(rec.est_cost)}</dd>
+                      <dd className="font-medium tabular-nums text-[var(--text-primary)]">{fmtMoney(rec.est_cost)}</dd>
                     </div>
                     <div>
                       <dt className="label">Affected orders</dt>
-                      <dd>
+                      <dd className="flex flex-wrap gap-2">
                         {rec.affected_orders.map((o) => (
-                          <Link key={o} className="mr-2 text-indigo-600 underline" to={`/orders/${o}`}>
+                          <Link key={o} className="link-id" to={`/orders/${o}`}>
                             {o}
                           </Link>
                         ))}
@@ -105,7 +109,7 @@ export default function RecommendationDetailPage() {
                   </dl>
 
                   {pending && can('decide_rec') && (
-                    <div className="mt-4 flex gap-2 border-t border-slate-100 pt-3">
+                    <div className="mt-5 flex gap-2 border-t border-[var(--border)] pt-4">
                       <button className="btn btn-primary" disabled={failed} onClick={() => setDialog('APPROVE')}>
                         Approve
                       </button>
@@ -114,27 +118,32 @@ export default function RecommendationDetailPage() {
                       </button>
                     </div>
                   )}
-                  {pending && !can('decide_rec') && <p className="mt-3 text-xs text-slate-500">Only a procurement officer can approve or reject.</p>}
+                  {pending && !can('decide_rec') && (
+                    <p className="mt-4 text-xs text-[var(--text-muted)]">Only a procurement officer can approve or reject.</p>
+                  )}
                 </div>
 
                 <div className="card">
-                  <h2 className="mb-2 font-semibold">Reasoning</h2>
-                  <p className="whitespace-pre-wrap text-sm text-slate-700">{rec.reasoning}</p>
+                  <h2 className="mb-3 text-base font-semibold text-[var(--text-primary)]">Reasoning</h2>
+                  <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-secondary)]">{rec.reasoning}</p>
                 </div>
               </div>
 
               {!pending && (
-                <div className="card mt-4">
-                  <h2 className="mb-2 font-semibold">Audit trail</h2>
-                  <p className="text-sm">
-                    Decision: <StatusBadge status={rec.status} /> {approver && <>by <b>{approver}</b></>} {rec.decided_at && <>at {fmtDateTime(rec.decided_at)}</>}
+                <div className="card">
+                  <h2 className="mb-3 text-base font-semibold text-[var(--text-primary)]">Audit trail</h2>
+                  <p className="text-sm text-[var(--text-secondary)]">
+                    Decision: <StatusBadge status={rec.status} /> {approver && <>by <strong className="text-[var(--text-primary)]">{approver}</strong></>}{' '}
+                    {rec.decided_at && <>at {fmtDisplayDateTime(rec.decided_at)}</>}
                   </p>
-                  {(rec.decision_reason ?? rec.reason) && <p className="mt-1 text-sm text-slate-600">Reason: {rec.decision_reason ?? rec.reason}</p>}
+                  {(rec.decision_reason ?? rec.reason) && (
+                    <p className="mt-2 text-sm text-[var(--text-secondary)]">Reason: {rec.decision_reason ?? rec.reason}</p>
+                  )}
                   {rec.audit_trail && rec.audit_trail.length > 0 && (
-                    <ul className="mt-2 space-y-1 text-sm">
+                    <ul className="mt-3 space-y-1 text-sm text-[var(--text-muted)]">
                       {rec.audit_trail.map((a, i) => (
-                        <li key={i} className="text-slate-600">
-                          {fmtDateTime(a.at)} - {a.by ?? 'system'}: {a.action}
+                        <li key={i}>
+                          {fmtDisplayDateTime(a.at)} · {a.by ?? 'system'}: {a.action}
                           {a.reason ? ` (${a.reason})` : ''}
                         </li>
                       ))}
@@ -143,13 +152,13 @@ export default function RecommendationDetailPage() {
                 </div>
               )}
 
-              <div className="card mt-4">
-                <h2 className="mb-2 font-semibold">Evidence trace</h2>
+              <div className="card">
+                <h2 className="mb-3 text-base font-semibold text-[var(--text-primary)]">Evidence trace</h2>
                 <ToolTraceViewer evidence={rec.evidence} />
               </div>
 
               {dialog && <ApprovalDialog recId={recId} decision={dialog} onClose={() => setDialog(null)} />}
-            </>
+            </div>
           );
         }}
       </QueryBoundary>

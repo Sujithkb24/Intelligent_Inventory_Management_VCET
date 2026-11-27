@@ -36,10 +36,10 @@ export default function AgentChatPage() {
       <PageHeader title="Agent chat" />
       <Banner tone="amber">Numbers come from backend tools. Verify before acting.</Banner>
 
-      <div className="card mb-3 min-h-[300px] space-y-3">
+      <div className="card mb-4 min-h-[300px] space-y-3">
         {msgs.length === 0 && (
           <div>
-            <p className="mb-2 text-sm text-slate-500">Try a suggested prompt:</p>
+            <p className="mb-3 text-sm text-[var(--text-muted)]">Try a suggested prompt:</p>
             <div className="flex flex-wrap gap-2">
               {SUGGESTED.map((s) => (
                 <button key={s} className="btn" onClick={() => send(s)}>
@@ -51,18 +51,26 @@ export default function AgentChatPage() {
         )}
         {msgs.map((m, i) => (
           <div key={i} className={m.role === 'user' ? 'text-right' : ''}>
-            <div className={`inline-block max-w-[90%] whitespace-pre-wrap rounded-lg px-3 py-2 text-left text-sm ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-100'}`}>{m.text}</div>
+            <div
+              className={`inline-block max-w-[90%] whitespace-pre-wrap rounded-[12px] px-3.5 py-2.5 text-left text-sm ${
+                m.role === 'user'
+                  ? 'bg-[var(--blue-600)] text-white'
+                  : 'bg-[var(--bg)] text-[var(--text-primary)]'
+              }`}
+            >
+              {m.text}
+            </div>
             {m.trace && (
-              <details className="mt-1 text-left">
-                <summary className="cursor-pointer text-xs text-slate-500">Tool trace</summary>
-                <div className="mt-1">
+              <details className="mt-1.5 text-left">
+                <summary className="cursor-pointer text-xs font-medium text-[var(--purple-700)]">Tool trace</summary>
+                <div className="mt-1.5">
                   <ToolTraceViewer evidence={m.trace} />
                 </div>
               </details>
             )}
           </div>
         ))}
-        {ask.isPending && <div className="text-sm text-slate-500">Agent is working (up to 8 tool calls){'…'}</div>}
+        {ask.isPending && <div className="text-sm text-[var(--text-muted)]">Agent is working (up to 8 tool calls){'…'}</div>}
       </div>
 
       <form
@@ -72,7 +80,12 @@ export default function AgentChatPage() {
           send(q);
         }}
       >
-        <input className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Ask about orders, materials or suppliers" />
+        <input
+          className="input"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Ask about orders, materials or suppliers"
+        />
         <button className="btn btn-primary" disabled={ask.isPending || q.trim().length < 3}>
           Ask
         </button>

@@ -3,7 +3,8 @@ import { useLatestRisk, useRunRisk } from '../api/hooks';
 import { useAuth } from '../auth/AuthContext';
 import { InvestigateButton } from '../components/agent/InvestigatePanel';
 import { EmptyState, PageHeader, QueryBoundary, RiskBadge } from '../components/common/common';
-import { fmtDate, fmtDateTime, fmtProb } from '../lib/format';
+import { PlayIcon, SpinnerIcon } from '../components/common/Icons';
+import { fmtDisplayDate, fmtDisplayDateTime, fmtProb, fmtSlack } from '../lib/format';
 import { toast } from '../lib/toast';
 
 export default function RiskPage() {
@@ -11,56 +12,100 @@ export default function RiskPage() {
   const q = useLatestRisk(true);
   const run = useRunRisk();
 
+  const triggerRun = () => {
+    toast('Risk run started', 'info');
+    run.mutate(undefined, {
+      onSuccess: () => toast('Risk run complete', 'success'),
+      onError: (e) => e.status !== 403 && toast(e.message, 'error'),
+    });
+  };
+
   return (
     <div>
       <PageHeader title="Order risk">
         {q.data && (
-          <span className="text-xs text-slate-500">
-            Run {q.data.run_id ?? '—'} {'·'} {fmtDateTime(q.data.ran_at)}
+          <span className="text-[13px] tabular-nums text-[var(--text-muted)]">
+            Run <span className="font-mono">{q.data.run_id ?? '—'}</span> {'·'} {fmtDisplayDateTime(q.data.ran_at)}
           </span>
         )}
         {can('run_risk') && (
           <button
             className="btn btn-primary"
             disabled={run.isPending}
-            onClick={() => run.mutate(undefined, { onSuccess: () => toast('Risk run complete', 'success'), onError: (e) => e.status !== 403 && toast(e.message, 'error') })}
+            aria-busy={run.isPending}
+            onClick={triggerRun}
           >
-            {run.isPending ? 'Running…' : 'Run now'}
+            {run.isPending ? <SpinnerIcon className="h-3.5 w-3.5" /> : <PlayIcon className="h-4 w-4" />}
+            <span>{run.isPending ? 'Running…' : 'Run risk now'}</span>
           </button>
         )}
       </PageHeader>
       <QueryBoundary q={q}>
         {(d) => {
-          if (d.items.length === 0) return <EmptyState title="No risk run yet" hint="Press Run now to evaluate all open orders." />;
+          if (d.items.length === 0) {
+            return (
+              <EmptyState
+                title="No risk run yet"
+                hint={can('run_risk') ? 'Press Run risk now to evaluate all open orders.' : 'Ask a planner to run risk evaluation.'}
+              />
+            );
+          }
           const prev = new Map(d.previous.map((p) => [p.order_id, p.risk_level]));
           const hasPrev = d.previous.length > 0;
           return (
             <div className="card overflow-x-auto p-0">
-              <table className="w-full">
+              <table className="w-full border-collapse">
+                <caption className="sr-only">Order risk results</caption>
                 <thead>
                   <tr>
-                    <th className="th">Order</th>
-                    <th className="th">CRD</th>
-                    <th className="th">Projected ship</th>
-                    <th className="th text-right">Slack</th>
-                    <th className="th">Risk</th>
-                    {hasPrev && <th className="th">Previous run</th>}
-                    <th className="th">Bottleneck</th>
-                    <th className="th text-right">Miss prob.</th>
-                    <th className="th" />
+                    <th scope="col" className="th sticky left-0 z-20">
+                      Order
+                    </th>
+                    <th scope="col" className="th">
+                      CRD
+                    </th>
+                    <th scope="col" className="th">
+                      Projected ship
+                    </th>
+                    <th scope="col" className="th text-right">
+                      Slack
+                    </th>
+                    <th scope="col" className="th">
+                      Risk
+                    </th>
+                    {hasPrev && (
+                      <th scope="col" className="th">
+                        Previous run
+                      </th>
+                    )}
+                    <th scope="col" className="th">
+                      Bottleneck
+                    </th>
+                    <th scope="col" className="th text-right">
+                      Miss prob.
+                    </th>
+                    <th scope="col" className="th text-right">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {d.items.map((r) => (
-                    <tr key={r.order_id}>
-                      <td className="td">
-                        <Link className="text-indigo-600 underline" to={`/orders/${r.order_id}`}>
+                    <tr key={r.order_id} className="table-row group">
+                      <td className="td sticky left-0 z-10 bg-white group-hover:bg-[var(--blue-50)]">
+                        <Link className="link-id" to={`/orders/${r.order_id}`}>
                           {r.order_id}
                         </Link>
                       </td>
-                      <td className="td">{fmtDate(r.crd)}</td>
-                      <td className="td">{fmtDate(r.projected_ship_date)}</td>
-                      <td className={`td text-right ${r.slack_days < 0 ? 'font-semibold text-red-600' : ''}`}>{r.slack_days}</td>
+                      <td className="td whitespace-nowrap tabular-nums">{fmtDisplayDate(r.crd)}</td>
+                      <td className="td whitespace-nowrap tabular-nums">{fmtDisplayDate(r.projected_ship_date)}</td>
+                      <td
+                        className={`td whitespace-nowrap text-right tabular-nums ${
+                          r.slack_days < 0 ? 'font-semibold text-[var(--risk-high-text)]' : ''
+                        }`}
+                      >
+                        {fmtSlack(r.slack_days)}
+                      </td>
                       <td className="td">
                         <RiskBadge level={r.risk_level} />
                       </td>
@@ -69,9 +114,21 @@ export default function RiskPage() {
                           <RiskBadge level={prev.get(r.order_id) ?? null} />
                         </td>
                       )}
-                      <td className="td">{r.bottleneck_material ?? '—'}</td>
-                      <td className="td text-right">{fmtProb(r.miss_probability)}</td>
-                      <td className="td">{r.risk_level === 'HIGH' && can('run_agent') && <InvestigateButton orderId={r.order_id} />}</td>
+                      <td className="td">
+                        {r.bottleneck_material ? (
+                          <Link className="link-id" to={`/inventory/${r.bottleneck_material}`}>
+                            {r.bottleneck_material}
+                          </Link>
+                        ) : (
+                          <span className="text-[var(--text-muted)]">{'—'}</span>
+                        )}
+                      </td>
+                      <td className="td text-right tabular-nums">{fmtProb(r.miss_probability)}</td>
+                      <td className="td text-right">
+                        {r.risk_level === 'HIGH' && can('run_agent') && (
+                          <InvestigateButton orderId={r.order_id} variant="row" />
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

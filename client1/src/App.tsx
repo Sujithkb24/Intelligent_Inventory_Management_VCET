@@ -51,7 +51,7 @@ export default function App() {
           element={
             <div className="card">
               <h2 className="mb-2 text-lg font-semibold">Not found</h2>
-              <Link className="text-indigo-600 underline" to="/">
+              <Link className="link-text" to="/">
                 Back to dashboard
               </Link>
             </div>

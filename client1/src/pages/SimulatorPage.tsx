@@ -3,6 +3,7 @@ import { useFieldArray, useForm } from 'react-hook-form';
 import { useSimulate } from '../api/hooks';
 import type { RiskLevel, SimDiffRow, SimulationIn } from '../api/types';
 import { Banner, EmptyState, ErrorPanel, PageHeader, RiskBadge } from '../components/common/common';
+import { fmtSlack } from '../lib/format';
 
 interface FormVals {
   supplier_delays: { po_id: string; supplier_id: string; material_id: string; delay_days: number }[];
@@ -16,32 +17,46 @@ function DiffTable({ rows }: { rows: SimDiffRow[] }) {
   if (rows.length === 0) return <EmptyState title="No differences" hint="The scenario did not change any order." />;
   return (
     <div className="card overflow-x-auto p-0">
-      <table className="w-full">
+      <table className="w-full border-collapse">
+        <caption className="sr-only">Simulation comparison before and after</caption>
         <thead>
           <tr>
-            <th className="th">Order</th>
-            <th className="th text-right">Slack before</th>
-            <th className="th text-right">Slack after</th>
-            <th className="th">Risk before</th>
-            <th className="th">Risk after</th>
+            <th scope="col" className="th sticky left-0 z-20">
+              Order
+            </th>
+            <th scope="col" className="th text-right">
+              Slack before
+            </th>
+            <th scope="col" className="th text-right">
+              Slack after
+            </th>
+            <th scope="col" className="th">
+              Risk before
+            </th>
+            <th scope="col" className="th">
+              Risk after
+            </th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => {
             const worse = r.risk_before && r.risk_after && ORDER[r.risk_after] > ORDER[r.risk_before];
             const better = r.risk_before && r.risk_after && ORDER[r.risk_after] < ORDER[r.risk_before];
+            const rowBg = worse ? 'bg-[#FDECEA]/60' : better ? 'bg-[#E3F6EC]/60' : '';
             return (
-              <tr key={r.order_id} className={worse ? 'bg-red-50' : better ? 'bg-green-50' : ''}>
-                <td className="td">{r.order_id}</td>
-                <td className="td text-right">{r.slack_before ?? '—'}</td>
-                <td className="td text-right">{r.slack_after ?? '—'}</td>
+              <tr key={r.order_id} className={`table-row ${rowBg}`}>
+                <td className="td font-mono text-[13px] font-medium text-[var(--text-primary)]">{r.order_id}</td>
+                <td className="td text-right tabular-nums">{fmtSlack(r.slack_before)}</td>
+                <td className="td text-right tabular-nums">{fmtSlack(r.slack_after)}</td>
                 <td className="td">
                   <RiskBadge level={r.risk_before} />
                 </td>
                 <td className="td">
-                  {worse && <span className="mr-1 text-red-600">{'↑'} newly late</span>}
-                  {better && <span className="mr-1 text-green-600">{'↓'} rescued</span>}
-                  <RiskBadge level={r.risk_after} />
+                  <div className="flex items-center gap-2">
+                    {worse && <span className="text-xs font-semibold text-[#B42318]">{'↑'} newly late</span>}
+                    {better && <span className="text-xs font-semibold text-[#067647]">{'↓'} rescued</span>}
+                    <RiskBadge level={r.risk_after} />
+                  </div>
                 </td>
               </tr>
             );
@@ -83,8 +98,8 @@ export default function SimulatorPage() {
       <PageHeader title="What-if simulator" />
       <Banner tone="blue">Simulation only. No real data was changed.</Banner>
 
-      <form onSubmit={handleSubmit(submit)} className="space-y-4">
-        <div className="flex gap-2">
+      <form onSubmit={handleSubmit(submit)} className="space-y-5">
+        <div className="flex flex-wrap gap-2">
           <button
             type="button"
             className="btn"
@@ -102,14 +117,14 @@ export default function SimulatorPage() {
 
         <section className="card">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-semibold">Supplier delays</h2>
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Supplier delays</h2>
             <button type="button" className="btn" onClick={() => delays.append({ po_id: '', supplier_id: '', material_id: '', delay_days: 1 })}>
               Add
             </button>
           </div>
-          <p className="mb-2 text-xs text-slate-500">Choose a PO id, or a supplier plus material.</p>
+          <p className="mb-3 text-xs text-[var(--text-muted)]">Choose a PO id, or a supplier plus material.</p>
           {delays.fields.map((f, i) => (
-            <div key={f.id} className="mb-2 grid grid-cols-5 gap-2">
+            <div key={f.id} className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-5">
               <input className="input" placeholder="PO id" {...register(`supplier_delays.${i}.po_id`)} />
               <input className="input" placeholder="Supplier id" {...register(`supplier_delays.${i}.supplier_id`)} />
               <input className="input" placeholder="Material id" {...register(`supplier_delays.${i}.material_id`)} />
@@ -122,14 +137,14 @@ export default function SimulatorPage() {
         </section>
 
         <section className="card">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-semibold">Demand changes</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Demand changes</h2>
             <button type="button" className="btn" onClick={() => demand.append({ order_id: '', new_qty: 0 })}>
               Add
             </button>
           </div>
           {demand.fields.map((f, i) => (
-            <div key={f.id} className="mb-2 grid grid-cols-3 gap-2">
+            <div key={f.id} className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <input className="input" placeholder="Order id" {...register(`demand_changes.${i}.order_id`)} />
               <input className="input" type="number" placeholder="New qty" {...register(`demand_changes.${i}.new_qty`, { valueAsNumber: true })} />
               <button type="button" className="btn" onClick={() => demand.remove(i)}>
@@ -140,14 +155,14 @@ export default function SimulatorPage() {
         </section>
 
         <section className="card">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-semibold">Extra receipts</h2>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-[var(--text-primary)]">Extra receipts</h2>
             <button type="button" className="btn" onClick={() => receipts.append({ material_id: '', qty: 0, date: '' })}>
               Add
             </button>
           </div>
           {receipts.fields.map((f, i) => (
-            <div key={f.id} className="mb-2 grid grid-cols-4 gap-2">
+            <div key={f.id} className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
               <input className="input" placeholder="Material id" {...register(`extra_receipts.${i}.material_id`)} />
               <input className="input" type="number" placeholder="Qty" {...register(`extra_receipts.${i}.qty`, { valueAsNumber: true })} />
               <input className="input" type="date" {...register(`extra_receipts.${i}.date`)} />
@@ -167,7 +182,7 @@ export default function SimulatorPage() {
         {sim.isError && <ErrorPanel error={sim.error} />}
         {result && (
           <>
-            <h2 className="mb-2 font-semibold">Before and after</h2>
+            <h2 className="mb-3 text-base font-semibold text-[var(--text-primary)]">Before and after</h2>
             <DiffTable rows={result} />
           </>
         )}

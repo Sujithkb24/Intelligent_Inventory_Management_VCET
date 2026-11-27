@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useInventory, useShortages } from '../api/hooks';
 import { EmptyState, PageHeader, QueryBoundary, Tabs } from '../components/common/common';
-import { fmtDate, fmtNum } from '../lib/format';
+import { fmtDisplayDate, fmtGap, fmtNum } from '../lib/format';
 
 export default function InventoryPage() {
   const [tab, setTab] = useState<'positions' | 'shortages'>('positions');
@@ -30,8 +30,13 @@ export default function InventoryPage() {
 
       {tab === 'positions' ? (
         <>
-          <div className="mb-3 flex gap-2">
-            <input className="input max-w-xs" placeholder="Search material id" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <div className="mb-4 flex flex-wrap gap-3">
+            <input
+              className="input max-w-xs"
+              placeholder="Search material id"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
             {categories.length > 0 && (
               <select className="input max-w-xs" value={category} onChange={(e) => setCategory(e.target.value)}>
                 <option value="">All categories</option>
@@ -47,32 +52,48 @@ export default function InventoryPage() {
                 (m) =>
                   m.material_id.toLowerCase().includes(search.toLowerCase()) && (!category || m.category === category),
               );
-              if (filtered.length === 0) return <EmptyState title="No materials found" hint="Post inventory events to populate positions." />;
+              if (filtered.length === 0)
+                return <EmptyState title="No materials found" hint="Post inventory events to populate positions." />;
               return (
                 <div className="card overflow-x-auto p-0">
-                  <table className="w-full">
+                  <table className="w-full border-collapse">
+                    <caption className="sr-only">Material inventory positions</caption>
                     <thead>
                       <tr>
-                        <th className="th">Material</th>
-                        <th className="th text-right">On hand</th>
-                        <th className="th text-right">Incoming</th>
-                        <th className="th text-right">Allocated</th>
-                        <th className="th text-right">Net availability</th>
+                        <th scope="col" className="th sticky left-0 z-20">
+                          Material
+                        </th>
+                        <th scope="col" className="th text-right">
+                          On hand
+                        </th>
+                        <th scope="col" className="th text-right">
+                          Incoming
+                        </th>
+                        <th scope="col" className="th text-right">
+                          Allocated
+                        </th>
+                        <th scope="col" className="th text-right">
+                          Net availability
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {filtered.map((m) => (
-                        <tr key={m.material_id}>
-                          <td className="td">
-                            <Link className="text-indigo-600 underline" to={`/inventory/${m.material_id}`}>
+                        <tr key={m.material_id} className="table-row group">
+                          <td className="td sticky left-0 z-10 bg-white group-hover:bg-[var(--blue-50)]">
+                            <Link className="link-id" to={`/inventory/${m.material_id}`}>
                               {m.material_id}
                             </Link>
-                            {m.name && <span className="ml-2 text-xs text-slate-500">{m.name}</span>}
+                            {m.name && <span className="ml-2 text-xs text-[var(--text-muted)]">{m.name}</span>}
                           </td>
-                          <td className="td text-right">{fmtNum(m.on_hand)}</td>
-                          <td className="td text-right">{fmtNum(m.incoming)}</td>
-                          <td className="td text-right">{fmtNum(m.allocated)}</td>
-                          <td className={`td text-right font-semibold ${m.net_availability < 0 ? 'text-red-600' : ''}`}>
+                          <td className="td text-right tabular-nums">{fmtNum(m.on_hand)}</td>
+                          <td className="td text-right tabular-nums">{fmtNum(m.incoming)}</td>
+                          <td className="td text-right tabular-nums">{fmtNum(m.allocated)}</td>
+                          <td
+                            className={`td text-right font-semibold tabular-nums ${
+                              m.net_availability < 0 ? 'text-[var(--risk-high-text)]' : 'text-[var(--text-primary)]'
+                            }`}
+                          >
                             {fmtNum(m.net_availability)}
                           </td>
                         </tr>
@@ -88,38 +109,55 @@ export default function InventoryPage() {
         <QueryBoundary q={shortages}>
           {(rows) =>
             rows.length === 0 ? (
-              <EmptyState title="No shortages" hint="All demand is covered." />
+              <EmptyState title="No shortages" hint="All demand is covered by current supply." />
             ) : (
               <div className="card overflow-x-auto p-0">
-                <table className="w-full">
+                <table className="w-full border-collapse">
+                  <caption className="sr-only">Material shortages</caption>
                   <thead>
                     <tr>
-                      <th className="th">Material</th>
-                      <th className="th text-right">Demand</th>
-                      <th className="th text-right">Available</th>
-                      <th className="th text-right">Gap</th>
-                      <th className="th">First short date</th>
-                      <th className="th">Affected orders</th>
+                      <th scope="col" className="th sticky left-0 z-20">
+                        Material
+                      </th>
+                      <th scope="col" className="th text-right">
+                        Demand
+                      </th>
+                      <th scope="col" className="th text-right">
+                        Available
+                      </th>
+                      <th scope="col" className="th text-right">
+                        Gap
+                      </th>
+                      <th scope="col" className="th">
+                        First short date
+                      </th>
+                      <th scope="col" className="th">
+                        Affected orders
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {rows.map((s) => (
-                      <tr key={s.material_id}>
-                        <td className="td">
-                          <Link className="text-indigo-600 underline" to={`/inventory/${s.material_id}`}>
+                      <tr key={s.material_id} className="table-row group">
+                        <td className="td sticky left-0 z-10 bg-white group-hover:bg-[var(--blue-50)]">
+                          <Link className="link-id" to={`/inventory/${s.material_id}`}>
                             {s.material_id}
                           </Link>
                         </td>
-                        <td className="td text-right">{fmtNum(s.demand)}</td>
-                        <td className="td text-right">{fmtNum(s.available)}</td>
-                        <td className="td text-right font-semibold text-red-600">{fmtNum(s.gap)}</td>
-                        <td className="td">{fmtDate(s.first_short_date)}</td>
+                        <td className="td text-right tabular-nums">{fmtNum(s.demand)}</td>
+                        <td className="td text-right tabular-nums">{fmtNum(s.available)}</td>
+                        <td className="td text-right font-semibold tabular-nums text-[var(--risk-high-text)]">
+                          {fmtGap(s.gap)}
+                        </td>
+                        <td className="td whitespace-nowrap tabular-nums">{fmtDisplayDate(s.first_short_date)}</td>
                         <td className="td">
-                          {s.affected_orders.map((o) => (
-                            <Link key={o} className="mr-2 text-indigo-600 underline" to={`/orders/${o}`}>
-                              {o}
-                            </Link>
-                          ))}
+                          <div className="flex flex-wrap gap-2">
+                            {s.affected_orders.map((o) => (
+                              <Link key={o} className="link-id" to={`/orders/${o}`}>
+                                {o}
+                              </Link>
+                            ))}
+                          </div>
                         </td>
                       </tr>
                     ))}

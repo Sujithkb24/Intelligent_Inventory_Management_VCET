@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ROLES, type Role } from '../api/types';
+import { BrandMark } from '../components/common/Icons';
 
 export default function LoginPage() {
   const { session, login } = useAuth();
@@ -12,9 +13,9 @@ export default function LoginPage() {
   if (session) return <Navigate to="/" replace />;
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--bg)] p-4">
       <form
-        className="card w-full max-w-sm space-y-4"
+        className="card w-full max-w-sm space-y-5"
         onSubmit={(e) => {
           e.preventDefault();
           if (!user.trim()) return;
@@ -22,19 +23,40 @@ export default function LoginPage() {
           nav('/');
         }}
       >
-        <div>
-          <h1 className="text-xl font-bold">EV Smart Inventory Intelligence</h1>
-          <p className="mt-1 rounded bg-amber-50 px-2 py-1 text-xs text-amber-800">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5">
+            <BrandMark className="h-7 w-7" />
+            <h1 className="text-lg font-bold tracking-[-0.01em] text-[var(--text-primary)]">
+              EV Smart Inventory Intelligence
+            </h1>
+          </div>
+          <p className="rounded-[8px] border border-[#F6D79D] bg-[#FFF3DC] px-3 py-2 text-xs text-[#9A5B00]">
             Demo login only. Roles are sent as headers and are not real security.
           </p>
         </div>
         <div>
-          <label className="label">Username</label>
-          <input className="input" value={user} onChange={(e) => setUser(e.target.value)} placeholder="e.g. asha" autoFocus />
+          <label className="label" htmlFor="login-username">
+            Username
+          </label>
+          <input
+            id="login-username"
+            className="input"
+            value={user}
+            onChange={(e) => setUser(e.target.value)}
+            placeholder="e.g. asha"
+            autoFocus
+          />
         </div>
         <div>
-          <label className="label">Role</label>
-          <select className="input" value={role} onChange={(e) => setRole(e.target.value as Role)}>
+          <label className="label" htmlFor="login-role">
+            Role
+          </label>
+          <select
+            id="login-role"
+            className="input"
+            value={role}
+            onChange={(e) => setRole(e.target.value as Role)}
+          >
             {ROLES.map((r) => (
               <option key={r} value={r}>
                 {r}

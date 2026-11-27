@@ -24,34 +24,41 @@ const NUMERIC = new Set(['quantity', 'delay_days']);
 function ResultsTable({ rows }: { rows: EventResult[] }) {
   const count = (s: string) => rows.filter((r) => r.status === s).length;
   return (
-    <div className="card mt-4 p-0">
-      <div className="flex gap-4 border-b border-slate-100 px-3 py-2 text-sm">
+    <div className="card mt-5 overflow-hidden p-0">
+      <div className="flex gap-5 border-b border-[var(--border)] px-4 py-3 text-sm tabular-nums text-[var(--text-secondary)]">
         <span>
-          Applied: <b>{count('APPLIED')}</b>
+          Applied: <strong className="text-[var(--text-primary)]">{count('APPLIED')}</strong>
         </span>
         <span>
-          Duplicate: <b>{count('DUPLICATE')}</b>
+          Duplicate: <strong className="text-[var(--text-primary)]">{count('DUPLICATE')}</strong>
         </span>
         <span>
-          Rejected: <b>{count('REJECTED')}</b>
+          Rejected: <strong className="text-[var(--text-primary)]">{count('REJECTED')}</strong>
         </span>
       </div>
-      <table className="w-full">
+      <table className="w-full border-collapse">
+        <caption className="sr-only">Submitted event results</caption>
         <thead>
           <tr>
-            <th className="th">Event</th>
-            <th className="th">Status</th>
-            <th className="th">Error (server)</th>
+            <th scope="col" className="th">
+              Event
+            </th>
+            <th scope="col" className="th">
+              Status
+            </th>
+            <th scope="col" className="th">
+              Error (server)
+            </th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={`${r.event_id}-${i}`}>
-              <td className="td">{r.event_id}</td>
+            <tr key={`${r.event_id}-${i}`} className="table-row">
+              <td className="td font-mono text-[13px] font-medium text-[var(--text-primary)]">{r.event_id}</td>
               <td className="td">
                 <StatusBadge status={r.status} />
               </td>
-              <td className="td text-red-700">{r.error ?? ''}</td>
+              <td className="td text-[#B42318]">{r.error ?? ''}</td>
             </tr>
           ))}
         </tbody>
@@ -88,12 +95,12 @@ function SingleForm() {
 
   return (
     <div>
-      <form onSubmit={handleSubmit(submit)} className="card grid max-w-2xl grid-cols-2 gap-3">
-        <div className="col-span-2">
+      <form onSubmit={handleSubmit(submit)} className="card grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
           <label className="label">Event id (editable: send the same id twice to see DUPLICATE)</label>
           <div className="flex gap-2">
-            <input className="input" {...register('event_id')} />
-            <button type="button" className="btn" onClick={() => setValue('event_id', eventId())}>
+            <input className="input font-mono text-[13px]" {...register('event_id')} />
+            <button type="button" className="btn shrink-0" onClick={() => setValue('event_id', eventId())}>
               New id
             </button>
           </div>
@@ -112,9 +119,9 @@ function SingleForm() {
           <input className="input" {...register('source')} />
           <FieldError msg={errors.source?.message} />
         </div>
-        <div className="col-span-2">
+        <div className="sm:col-span-2">
           <label className="label">Timestamp (ISO)</label>
-          <input className="input" {...register('timestamp')} />
+          <input className="input font-mono text-[13px]" {...register('timestamp')} />
           <FieldError msg={errors.timestamp?.message} />
         </div>
         {FIELDS[type]?.map((f) => (
@@ -124,12 +131,17 @@ function SingleForm() {
               className="input"
               type={NUMERIC.has(f) ? 'number' : 'text'}
               step="any"
-              {...register(f, NUMERIC.has(f) ? { setValueAs: (v) => (v === '' || v === undefined ? undefined : Number(v)) } : { setValueAs: (v) => (v === '' ? undefined : v) })}
+              {...register(
+                f,
+                NUMERIC.has(f)
+                  ? { setValueAs: (v) => (v === '' || v === undefined ? undefined : Number(v)) }
+                  : { setValueAs: (v) => (v === '' ? undefined : v) },
+              )}
             />
             <FieldError msg={errors[f]?.message as string | undefined} />
           </div>
         ))}
-        <div className="col-span-2">
+        <div className="pt-1 sm:col-span-2">
           <button className="btn btn-primary" disabled={post.isPending}>
             {post.isPending ? 'Sending…' : 'Send event'}
           </button>
@@ -185,8 +197,8 @@ function BatchUploader() {
 
   return (
     <div>
-      <div className="card space-y-3">
-        <div className="flex items-center gap-3">
+      <div className="card space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
           <label className="label mb-0">Paste a JSON array (or CSV with a header row), or upload a file</label>
           <input
             type="file"
@@ -197,9 +209,14 @@ function BatchUploader() {
             }}
           />
         </div>
-        <textarea className="input h-48 font-mono text-xs" value={text} onChange={(e) => setText(e.target.value)} placeholder='[{"event_id":"EVT-1","event_type":"INVENTORY_RECEIVED","timestamp":"2026-01-01T00:00:00Z","source":"erp","material_id":"MCU_AUTO","quantity":100}]' />
+        <textarea
+          className="input h-48 font-mono text-xs"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder='[{"event_id":"EVT-1","event_type":"INVENTORY_RECEIVED","timestamp":"2026-01-01T00:00:00Z","source":"erp","material_id":"MCU_AUTO","quantity":100}]'
+        />
         {errs.length > 0 && (
-          <ul className="rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+          <ul className="rounded-[8px] border border-[#F3C5C2] bg-[#FDECEA] p-3 text-xs text-[#B42318]">
             {errs.map((e) => (
               <li key={e}>{e}</li>
             ))}
@@ -208,7 +225,9 @@ function BatchUploader() {
         <button className="btn btn-primary" disabled={post.isPending || !text.trim()} onClick={send}>
           {post.isPending ? 'Sending…' : 'Validate and send batch'}
         </button>
-        <p className="text-xs text-slate-500">Client validation is a convenience. Partial failures never block the rest: the server's per-event result is the source of truth.</p>
+        <p className="text-xs text-[var(--text-muted)]">
+          Client validation is a convenience. Partial failures never block the rest: the server&apos;s per-event result is the source of truth.
+        </p>
       </div>
       {results.length > 0 && <ResultsTable rows={results} />}
     </div>
@@ -224,21 +243,28 @@ function Rejected() {
           <EmptyState title="No rejected events" />
         ) : (
           <div className="card overflow-x-auto p-0">
-            <table className="w-full">
+            <table className="w-full border-collapse">
+              <caption className="sr-only">Rejected events</caption>
               <thead>
                 <tr>
-                  <th className="th">Event</th>
-                  <th className="th">Error</th>
-                  <th className="th">Raw payload</th>
+                  <th scope="col" className="th">
+                    Event
+                  </th>
+                  <th scope="col" className="th">
+                    Error
+                  </th>
+                  <th scope="col" className="th">
+                    Raw payload
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r, i) => (
-                  <tr key={`${r.event_id}-${i}`}>
-                    <td className="td">{r.event_id}</td>
-                    <td className="td text-red-700">{r.error ?? ''}</td>
+                  <tr key={`${r.event_id}-${i}`} className="table-row">
+                    <td className="td font-mono text-[13px] font-medium text-[var(--text-primary)]">{r.event_id}</td>
+                    <td className="td text-[#B42318]">{r.error ?? ''}</td>
                     <td className="td">
-                      <pre className="max-w-md overflow-auto text-xs">{JSON.stringify(r.payload ?? r.raw ?? r, null, 1)}</pre>
+                      <pre className="max-w-md overflow-auto font-mono text-xs">{JSON.stringify(r.payload ?? r.raw ?? r, null, 1)}</pre>
                     </td>
                   </tr>
                 ))}

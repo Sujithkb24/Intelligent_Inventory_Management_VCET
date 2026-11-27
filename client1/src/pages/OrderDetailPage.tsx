@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { InvestigateButton } from '../components/agent/InvestigatePanel';
 import { PageHeader, QueryBoundary, RiskBadge } from '../components/common/common';
 import { SlackBar } from '../components/orders/SlackBar';
-import { fmtDate, fmtNum, fmtProb } from '../lib/format';
+import { fmtDisplayDate, fmtNum, fmtProb } from '../lib/format';
 
 export default function OrderDetailPage() {
   const { orderId = '' } = useParams();
@@ -26,20 +26,22 @@ export default function OrderDetailPage() {
           const bottleneck = risk?.bottleneck_material ?? o.bottleneck_material ?? null;
           const showInvestigate = can('run_agent') && (level === 'HIGH' || level === 'MEDIUM');
           return (
-            <>
-              <div className="card mb-4">
-                <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-5">
+            <div className="space-y-5">
+              <div className="card">
+                <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-5">
                   <div>
                     <div className="label">Product</div>
-                    {o.product ?? '—'}
+                    <div className="font-medium text-[var(--text-primary)]">{o.product ?? '—'}</div>
                   </div>
                   <div>
                     <div className="label">Quantity</div>
-                    {fmtNum(o.qty)}
+                    <div className="font-medium tabular-nums text-[var(--text-primary)]">{fmtNum(o.qty)}</div>
                   </div>
                   <div>
                     <div className="label">CRD</div>
-                    {fmtDate(o.crd ?? risk?.crd)}
+                    <div className="font-medium tabular-nums text-[var(--text-primary)]">
+                      {fmtDisplayDate(o.crd ?? risk?.crd)}
+                    </div>
                   </div>
                   <div>
                     <div className="label">Risk</div>
@@ -47,10 +49,12 @@ export default function OrderDetailPage() {
                   </div>
                   <div>
                     <div className="label">Miss probability</div>
-                    {fmtProb(risk?.miss_probability ?? o.miss_probability ?? null)}
+                    <div className="font-medium tabular-nums text-[var(--text-primary)]">
+                      {fmtProb(risk?.miss_probability ?? o.miss_probability ?? null)}
+                    </div>
                   </div>
                 </div>
-                <div className="mt-4">
+                <div className="mt-5">
                   <SlackBar
                     slack={risk?.slack_days ?? o.slack_days}
                     crd={o.crd ?? risk?.crd}
@@ -58,34 +62,41 @@ export default function OrderDetailPage() {
                   />
                 </div>
                 {showInvestigate && (
-                  <div className="mt-4">
-                    <InvestigateButton orderId={orderId} full />
+                  <div className="mt-5 border-t border-[var(--border)] pt-4">
+                    <InvestigateButton orderId={orderId} full variant="primary" />
                   </div>
                 )}
               </div>
 
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="card">
-                  <h2 className="mb-2 font-semibold">Exploded BOM demand</h2>
+              <div className="grid gap-5 lg:grid-cols-2">
+                <div className="card overflow-hidden p-0">
+                  <div className="border-b border-[var(--border)] px-5 py-4 xl:px-6">
+                    <h2 className="text-base font-semibold text-[var(--text-primary)]">Exploded BOM demand</h2>
+                  </div>
                   {d.bom_demand.length === 0 ? (
-                    <div className="text-sm text-slate-500">Not returned by the API.</div>
+                    <div className="p-5 text-sm text-[var(--text-muted)] xl:p-6">Not returned by the API.</div>
                   ) : (
-                    <table className="w-full">
+                    <table className="w-full border-collapse">
+                      <caption className="sr-only">Exploded BOM material demand</caption>
                       <thead>
                         <tr>
-                          <th className="th">Material</th>
-                          <th className="th text-right">Qty</th>
+                          <th scope="col" className="th">
+                            Material
+                          </th>
+                          <th scope="col" className="th text-right">
+                            Qty
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {d.bom_demand.map((b) => (
-                          <tr key={b.material_id}>
+                          <tr key={b.material_id} className="table-row">
                             <td className="td">
-                              <Link className="text-indigo-600 underline" to={`/inventory/${b.material_id}`}>
+                              <Link className="link-id" to={`/inventory/${b.material_id}`}>
                                 {b.material_id}
                               </Link>
                             </td>
-                            <td className="td text-right">{fmtNum(b.qty)}</td>
+                            <td className="td text-right tabular-nums">{fmtNum(b.qty)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -93,32 +104,50 @@ export default function OrderDetailPage() {
                   )}
                 </div>
 
-                <div className="card">
-                  <h2 className="mb-2 font-semibold">Allocations</h2>
+                <div className="card overflow-hidden p-0">
+                  <div className="border-b border-[var(--border)] px-5 py-4 xl:px-6">
+                    <h2 className="text-base font-semibold text-[var(--text-primary)]">Allocations</h2>
+                  </div>
                   {d.allocations.length === 0 ? (
-                    <div className="text-sm text-slate-500">Not returned by the API.</div>
+                    <div className="p-5 text-sm text-[var(--text-muted)] xl:p-6">Not returned by the API.</div>
                   ) : (
-                    <table className="w-full">
+                    <table className="w-full border-collapse">
+                      <caption className="sr-only">Material allocations for order {orderId}</caption>
                       <thead>
                         <tr>
-                          <th className="th">Material</th>
-                          <th className="th text-right">Required</th>
-                          <th className="th text-right">Allocated</th>
-                          <th className="th">Ready date</th>
+                          <th scope="col" className="th">
+                            Material
+                          </th>
+                          <th scope="col" className="th text-right">
+                            Required
+                          </th>
+                          <th scope="col" className="th text-right">
+                            Allocated
+                          </th>
+                          <th scope="col" className="th">
+                            Ready date
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {d.allocations.map((a) => (
-                          <tr key={a.material_id} className={a.material_id === bottleneck ? 'bg-red-50' : ''}>
+                          <tr
+                            key={a.material_id}
+                            className={`table-row ${a.material_id === bottleneck ? 'bg-[#FDECEA]/60' : ''}`}
+                          >
                             <td className="td">
-                              <Link className="text-indigo-600 underline" to={`/inventory/${a.material_id}`}>
+                              <Link className="link-id" to={`/inventory/${a.material_id}`}>
                                 {a.material_id}
                               </Link>
-                              {a.material_id === bottleneck && <span className="ml-2 text-xs font-semibold text-red-600">bottleneck</span>}
+                              {a.material_id === bottleneck && (
+                                <span className="ml-2 inline-flex h-5 items-center rounded-full bg-[#FDECEA] px-2 text-[11px] font-semibold uppercase text-[#B42318]">
+                                  bottleneck
+                                </span>
+                              )}
                             </td>
-                            <td className="td text-right">{fmtNum(a.required)}</td>
-                            <td className="td text-right">{fmtNum(a.allocated)}</td>
-                            <td className="td">{fmtDate(a.ready_date)}</td>
+                            <td className="td text-right tabular-nums">{fmtNum(a.required)}</td>
+                            <td className="td text-right tabular-nums">{fmtNum(a.allocated)}</td>
+                            <td className="td whitespace-nowrap tabular-nums">{fmtDisplayDate(a.ready_date)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -126,7 +155,7 @@ export default function OrderDetailPage() {
                   )}
                 </div>
               </div>
-            </>
+            </div>
           );
         }}
       </QueryBoundary>

@@ -1,6 +1,6 @@
 function Json({ v }: { v: unknown }) {
   return (
-    <pre className="max-h-72 overflow-auto rounded bg-slate-900 p-2 text-xs text-slate-100">
+    <pre className="max-h-72 overflow-auto rounded-[8px] bg-[#161B2E] p-3 font-mono text-xs text-slate-100">
       {typeof v === 'string' ? v : JSON.stringify(v, null, 2)}
     </pre>
   );
@@ -9,7 +9,7 @@ function Json({ v }: { v: unknown }) {
 /** Evidence trace: one accordion section per tool (name, input, output). Supports the audit story. */
 export function ToolTraceViewer({ evidence }: { evidence: Record<string, unknown> | unknown[] | null | undefined }) {
   if (!evidence || (Array.isArray(evidence) ? evidence.length === 0 : Object.keys(evidence).length === 0)) {
-    return <div className="text-sm text-slate-500">No evidence trace was returned.</div>;
+    return <div className="text-sm text-[var(--text-muted)]">No evidence trace was returned.</div>;
   }
   const entries: [string, unknown][] = Array.isArray(evidence)
     ? evidence.map((e, i) => {
@@ -26,9 +26,9 @@ export function ToolTraceViewer({ evidence }: { evidence: Record<string, unknown
         const output = o.output ?? o.result;
         const structured = input !== undefined || output !== undefined;
         return (
-          <details key={name} className="rounded-md border border-slate-200 bg-white">
-            <summary className="cursor-pointer px-3 py-2 text-sm font-semibold">{name}</summary>
-            <div className="space-y-2 border-t border-slate-100 p-3">
+          <details key={name} className="rounded-[8px] border border-[var(--border)] bg-white">
+            <summary className="cursor-pointer px-3.5 py-2.5 font-mono text-[13px] font-semibold text-[var(--text-primary)]">{name}</summary>
+            <div className="space-y-3 border-t border-[var(--border)] p-3.5">
               {structured ? (
                 <>
                   <div>

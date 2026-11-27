@@ -56,7 +56,7 @@ export function ApprovalDialog({
       <form onSubmit={handleSubmit(submit)} className="space-y-3">
         <input type="hidden" {...register('decision')} />
         {approve ? (
-          <p className="rounded bg-amber-50 p-2 text-sm text-amber-900">
+          <p className="rounded-[8px] border border-[#F6D79D] bg-[#FFF3DC] p-3 text-sm text-[#9A5B00]">
             This creates an OPEN purchase order record. Nothing is sent to the supplier. A human must send it.
           </p>
         ) : null}
