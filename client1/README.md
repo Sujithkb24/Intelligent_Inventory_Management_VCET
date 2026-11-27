@@ -14,9 +14,11 @@ npm run dev              # http://localhost:5173, /api is proxied to http://loca
 
 Other scripts: `npm run build`, `npm run preview`, `npm test`, `npm run gen:types` (generates `src/api/schema.d.ts` from the FastAPI OpenAPI schema).
 
-## Demo login
+## Firebase login
 
-There is no login endpoint. The login page stores `{user, role}` in localStorage and the axios interceptor sends them as `X-User` and `X-Role` headers. Roles: `inventory_manager`, `production_planner`, `procurement_officer`, `admin`.
+By default, the login page uses Firebase Authentication (Email/Password). Copy `.env.example` to `.env` and add the Firebase web app's API key, Auth domain, project ID, and app ID. The backend verifies each Firebase ID token and authorizes using the server-assigned `role` custom claim; the role selector is available only in explicitly configured local demo mode.
+
+For local-only demo mode, set `VITE_AUTH_MODE=demo` and configure the backend with `AUTH_MODE=demo` and `STORE=memory`. This sends `X-User` and `X-Role` headers and is not authentication; never expose this mode publicly.
 
 ## Structure
 
@@ -51,8 +53,8 @@ src/
 - `GET /alerts` items have `alert_id` (or `id`), `severity`, `message`, `status`, `ref_id`, `ref_type`.
 - Grounding failure: `grounding_failure: true` on the recommendation, or a status containing `GROUNDING`.
 - The backend must register `/inventory/shortages` before `/inventory/{material_id}`.
-- If calling the API cross-origin, enable CORS for the web origin and allow `X-User` and `X-Role`.
+- If calling the API cross-origin, set backend `CORS_ORIGINS` to the exact web origin. Firebase requests use the `Authorization` header.
 
 ## Known limitations
 
-Polling data can be up to 30 s stale. Header roles are a demo mechanism; the backend is the authority. Agent numbers come from tool outputs and must be verified by a human before approval.
+Polling data can be up to 30 s stale. Agent numbers come from tool outputs and must be verified by a human before approval.

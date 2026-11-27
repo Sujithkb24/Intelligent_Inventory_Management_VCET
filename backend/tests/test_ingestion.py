@@ -1,4 +1,5 @@
 from app import models
+from app.config import settings
 from app.db import MemoryStore
 from app.services import ingestion
 from sim.generate_data import event_stream, load_master
@@ -41,3 +42,11 @@ def test_supplier_delay_updates_po(store):
     assert ingestion.process_event(store, confirm).status == "APPLIED"
     assert ingestion.process_event(store, delay).status == "APPLIED"
     assert store.get(models.PURCHASE_ORDERS, "PO-1")["delay_days"] == 5
+
+
+def test_kafka_enabled_events_are_written_to_outbox(store, monkeypatch):
+    monkeypatch.setattr(settings, "kafka_bootstrap_servers", "localhost:19092")
+    assert ingestion.process_event(store, received("EVT-OUTBOX")).status == "APPLIED"
+    row = store.get(models.EVENT_OUTBOX, "EVT-OUTBOX")
+    assert row["status"] == "PENDING"
+    assert row["payload"]["event_id"] == "EVT-OUTBOX"

@@ -34,6 +34,7 @@ export const PERMISSIONS: Record<Role, Permission[]> = {
   inventory_manager: [...common, 'post_events', 'view_rejected'],
   production_planner: planner,
   procurement_officer: [...planner, 'decide_rec'],
+  planner_lead: [...planner, 'decide_rec'],
   // admin: everything except approve/reject (view only)
   admin: [...planner, 'post_events', 'view_rejected', 'admin_tools'],
 };

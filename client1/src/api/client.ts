@@ -2,6 +2,8 @@ import axios from 'axios';
 import { config } from '../config';
 import { getSession, setSession } from '../auth/session';
 import { toast } from '../lib/toast';
+import { firebaseAuth } from '../auth/firebase';
+import { signOut } from 'firebase/auth';
 
 export interface ApiError {
   status: number;
@@ -30,13 +32,15 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-// Backend uses header-based roles for the hackathon. When it moves to JWT,
-// only this file and the login page change.
-api.interceptors.request.use((cfg) => {
-  const s = getSession();
-  if (s) {
-    cfg.headers['X-User'] = s.user;
-    cfg.headers['X-Role'] = s.role;
+api.interceptors.request.use(async (cfg) => {
+  if (config.authMode === 'demo') {
+    const s = getSession();
+    if (s) {
+      cfg.headers['X-User'] = s.user;
+      cfg.headers['X-Role'] = s.role ?? '';
+    }
+  } else if (firebaseAuth?.currentUser) {
+    cfg.headers.Authorization = `Bearer ${await firebaseAuth.currentUser.getIdToken()}`;
   }
   return cfg;
 });
@@ -47,6 +51,11 @@ api.interceptors.response.use(
     const e = normalizeError(err);
     if (e.status === 401) {
       setSession(null);
+      if (firebaseAuth?.currentUser) {
+        signOut(firebaseAuth).catch((signOutError: unknown) => {
+          console.error('Unable to clear expired Firebase session', signOutError);
+        });
+      }
       if (!location.pathname.startsWith('/login')) location.assign('/login');
     } else if (e.status === 403) {
       toast('Your role cannot do this', 'error');

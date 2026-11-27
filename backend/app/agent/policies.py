@@ -30,10 +30,14 @@ class ClaudePolicy:
         self.client = Anthropic(api_key=settings.anthropic_key, timeout=60)
         self.system = SYSTEM_PROMPT if mode == "investigate" else ASK_PROMPT
         self.specs = [s for s in SPECS if s["name"] in toolbox.names()]
+        self.usage = {"requests": 0, "input_tokens": 0, "output_tokens": 0}
 
     def next(self, messages, log):
         response = self.client.messages.create(model=settings.model, max_tokens=4000, system=self.system,
                                                tools=self.specs, messages=messages)
+        self.usage["requests"] += 1
+        self.usage["input_tokens"] += response.usage.input_tokens
+        self.usage["output_tokens"] += response.usage.output_tokens
         content = [block.model_dump(exclude_none=True) for block in response.content]
         return {"role": "assistant", "content": content}
 

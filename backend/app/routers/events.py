@@ -7,6 +7,7 @@ from app.config import settings
 from app.db import audit, get_store
 from app.routers.deps import ADMIN, INVENTORY, require
 from app.services import ingestion, risk
+from app.services import event_stream
 
 router = APIRouter(tags=["events"])
 
@@ -14,6 +15,8 @@ router = APIRouter(tags=["events"])
 def recompute(tasks, results):
     if settings.auto_recompute and any(r.status == "APPLIED" for r in results):
         tasks.add_task(risk.run_and_store, get_store())
+    if settings.kafka_bootstrap_servers and any(r.status == "APPLIED" for r in results):
+        tasks.add_task(event_stream.drain_pending, get_store())
 
 
 @router.post("/events")

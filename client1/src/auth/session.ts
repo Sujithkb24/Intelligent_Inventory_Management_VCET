@@ -4,7 +4,7 @@ const KEY = 'ev_session';
 
 export interface Session {
   user: string;
-  role: Role;
+  role: Role | null;
 }
 
 export function getSession(): Session | null {

@@ -39,8 +39,13 @@ export default function DashboardPage() {
   const canViewRecs = can('view_recs');
   const risk = useLatestRisk(canViewOrders);
   const shortages = useShortages();
+<<<<<<< HEAD
   const alerts = useAlerts(session?.role);
   const recs = useRecs('PENDING', canViewRecs);
+=======
+  const alerts = useAlerts(session?.role ?? undefined);
+  const recs = useRecs('PENDING', can('view_recs'));
+>>>>>>> ef9900dad6fc03c6e1ce13912aeaaebdc0647cf1
   const run = useRunRisk();
   const reducedMotion = usePrefersReducedMotion();
 

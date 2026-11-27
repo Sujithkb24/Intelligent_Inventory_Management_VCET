@@ -13,6 +13,7 @@ TODAY = date(2026, 11, 27)
 def offline(monkeypatch):
     for name, value in (("store", "memory"), ("ml_enabled", False), ("llm_provider", "rules"),
                         ("auto_recompute", False), ("scan_minutes", 0), ("api_key", ""),
+                        ("auth_mode", "demo"),
                         ("today_override", TODAY.isoformat()), ("po_buffer_pct", 0.10),
                         ("risk_buffer_days", 2), ("max_tool_calls", 8)):
         monkeypatch.setattr(settings, name, value)

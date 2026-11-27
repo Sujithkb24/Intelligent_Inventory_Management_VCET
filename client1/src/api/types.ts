@@ -1,6 +1,6 @@
 // Hand-written domain types mirroring the backend Pydantic models.
 
-export type Role = 'inventory_manager' | 'production_planner' | 'procurement_officer' | 'admin';
+export type Role = 'inventory_manager' | 'production_planner' | 'procurement_officer' | 'planner_lead' | 'admin';
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
 export type EventType =
   | 'INVENTORY_RECEIVED'
@@ -21,7 +21,7 @@ export const EVENT_TYPES: EventType[] = [
   'SUPPLIER_DELAY',
 ];
 
-export const ROLES: Role[] = ['inventory_manager', 'production_planner', 'procurement_officer', 'admin'];
+export const ROLES: Role[] = ['inventory_manager', 'production_planner', 'procurement_officer', 'planner_lead', 'admin'];
 
 export interface EventIn {
   event_id: string;

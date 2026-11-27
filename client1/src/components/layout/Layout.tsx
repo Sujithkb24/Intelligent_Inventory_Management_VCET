@@ -5,6 +5,7 @@ import { useAuth } from '../../auth/AuthContext';
 import type { Permission } from '../../auth/roles';
 import { useAlerts, useHealth } from '../../api/hooks';
 import { ToastHost } from '../common/common';
+<<<<<<< HEAD
 import {
   ActivityIcon,
   BellIcon,
@@ -22,6 +23,9 @@ import {
   XIcon,
   ZapIcon,
 } from '../common/Icons';
+=======
+import { toast } from '../../lib/toast';
+>>>>>>> ef9900dad6fc03c6e1ce13912aeaaebdc0647cf1
 
 const NAV: { to: string; label: string; perm: Permission; icon: (cls: string) => ReactNode }[] = [
   { to: '/', label: 'Dashboard', perm: 'view_dashboard', icon: (c) => <LayoutDashboardIcon className={c} /> },
@@ -202,12 +206,21 @@ function HealthIndicator({ enabled }: { enabled: boolean }) {
 function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   const { session, logout } = useAuth();
   const nav = useNavigate();
-  const alerts = useAlerts(session?.role);
+  const alerts = useAlerts(session?.role ?? undefined);
   const open = (alerts.data ?? []).filter((a) => (a.status ?? 'OPEN').toUpperCase() === 'OPEN').length;
 
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-[var(--border)] bg-white px-4 lg:px-6">
       <div className="flex items-center gap-3">
+<<<<<<< HEAD
+=======
+        <button className="relative btn" onClick={() => nav('/alerts')} aria-label="Alerts">
+          {'🔔'}
+          {open > 0 && <span className="rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">{open}</span>}
+        </button>
+        <span className="text-sm text-slate-600">{session?.user}</span>
+        {session?.role && <RoleBadge role={session.role} />}
+>>>>>>> ef9900dad6fc03c6e1ce13912aeaaebdc0647cf1
         <button
           type="button"
           onClick={onOpenMenu}
@@ -255,8 +268,7 @@ function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
           type="button"
           className="btn-ghost"
           onClick={() => {
-            logout();
-            nav('/login');
+            logout().then(() => nav('/login')).catch((error: unknown) => toast(String(error), 'error'));
           }}
         >
           Sign out
