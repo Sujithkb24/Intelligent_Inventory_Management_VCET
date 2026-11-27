@@ -119,7 +119,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <Link to="/" onClick={onNavigate} className="mb-6 flex items-center gap-2.5 rounded-[8px] px-1.5 py-1">
         <BrandMark className="h-6 w-6" />
         <span className="max-w-[168px] text-sm font-semibold leading-tight text-[var(--text-primary)]">
-          EV Smart Inventory Intelligence
+          Sanchaya ai
         </span>
       </Link>
       <nav aria-label="Primary navigation" className="flex flex-1 flex-col gap-1">
