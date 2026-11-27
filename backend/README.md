@@ -92,6 +92,18 @@ In local demo mode, requests use `X-User` and `X-Role` headers. Firebase mode re
 
 Dates in the demo are relative to the day it is loaded. Load it again after `--reset` if it is old.
 
+### Playground scenarios
+
+| Order | Product | Scenario |
+|---|---|---|
+| O103 | SCOOT_S, 150 | `MCU_AUTO` is short; HIGH risk with a draftable PO from SUP_A |
+| O107 | SCOOT_X, 60 | `SENSOR_LIDAR` is short; HIGH risk, single-source SUP_E with a 56-day lead time |
+| O104-O106 | SCOOT_S / SCOOT_P / HATCH_C | LOW-risk orders that consume the remaining MCU_AUTO stock; useful for simulating delays |
+
+`SCOOT_X` uses `BATT_LFP` and `SENSOR_LIDAR` instead of `MCU_AUTO`, so it exercises a different bottleneck. To create another order from the UI, use **Orders -> New order** (Order ID is pre-filled) and then **Run risk**.
+
+A PO is opened only through approval: investigate a HIGH-risk order, then approve the PENDING recommendation as `procurement_officer` or `planner_lead`. Approval creates an OPEN `PO-{rec_id}` record; nothing is sent to the supplier.
+
 ```bash
 curl -X POST http://127.0.0.1:8000/api/v1/events -H "X-User: asha" -H "X-Role: inventory_manager" -H "Content-Type: application/json" -d '{"event_id":"EVT1001","event_type":"INVENTORY_RECEIVED","material_id":"CELL_21700","quantity":5000,"timestamp":"2026-11-27T09:30:00","source":"warehouse_system"}'
 ```

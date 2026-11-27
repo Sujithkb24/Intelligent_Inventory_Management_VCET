@@ -9,13 +9,18 @@ ARTIFACTS = Path(__file__).resolve().parent / "artifacts"
 
 
 @lru_cache(maxsize=4)
+def _load_artifact(name, mtime_ns, size):
+    import joblib
+
+    return joblib.load(ARTIFACTS / f"{name}.joblib")
+
+
 def load_model(name):
     path = ARTIFACTS / f"{name}.joblib"
     if not path.exists():
         return None
-    import joblib
-
-    return joblib.load(path)
+    stat = path.stat()
+    return _load_artifact(name, stat.st_mtime_ns, stat.st_size)
 
 
 def delay_days(state, supplier_id, material_id, qty, today):
@@ -43,7 +48,8 @@ def save_prediction(store, po_id, predicted):
 
 def apply_delay_predictions(store, state):
     if load_model("delay") is None:
-        return
+        return 0
+    count = 0
     for po in state.purchase_orders.values():
         promised = date.fromisoformat(po["promised_date"])
         delay = delay_days(state, po["supplier_id"], po["material_id"], po["qty"], promised)
@@ -51,12 +57,15 @@ def apply_delay_predictions(store, state):
         if po.get("predicted_date") != predicted:
             po["predicted_date"] = predicted
             save_prediction(store, po["po_id"], predicted)
+        count += 1
+    return count
 
 
 def apply_miss_probability(state, allocations, risks, today):
     model = load_model("miss")
     if model is None or not risks:
-        return
+        return 0
     rows = [features.miss_row(state, state.orders[r["order_id"]], allocations, r, today) for r in risks]
     for r, probability in zip(risks, model.predict_proba(rows)[:, 1]):
         r["miss_probability"] = round(float(probability), 4)
+    return sum(r["miss_probability"] is not None for r in risks)

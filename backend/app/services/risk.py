@@ -38,9 +38,12 @@ def compute_risk(state, allocations, today, buffer_days=None):
             ship = today + timedelta(days=ceil(round(line_free, 9)) + tail)
             slack = (crd - ship).days
         covered = bool(rows) and not missing
+        level = classify(slack or 0, covered, buffer_days)
+        if level == "LOW":
+            bottleneck = None
         results.append({"order_id": order["order_id"], "crd": order["crd"],
                         "projected_ship_date": ship.isoformat() if ship else None, "slack_days": slack,
-                        "risk_level": classify(slack or 0, covered, buffer_days),
+                        "risk_level": level,
                         "bottleneck_material": bottleneck, "miss_probability": None})
     return results
 
@@ -81,20 +84,23 @@ def run_and_store(store, today=None, actor="system"):
 
     today = today or settings.today()
     state = load_state(store)
+    delay_predictions = 0
+    miss_probabilities = 0
     if settings.ml_enabled:
         from app.ml import predict
 
-        predict.apply_delay_predictions(store, state)
+        delay_predictions = predict.apply_delay_predictions(store, state)
     allocations, risks = evaluate(state, today, settings.ml_enabled)
     if settings.ml_enabled:
         from app.ml import predict
 
-        predict.apply_miss_probability(state, allocations, risks, today)
+        miss_probabilities = predict.apply_miss_probability(state, allocations, risks, today)
     previous = latest_run(store)
     run_id = new_id("RUN")
     created = now_iso()
     store.set(models.ALLOCATION_RUNS, run_id, {"run_id": run_id, "created_at": created, "rows_json": json.dumps(allocations)})
-    run = {"run_id": run_id, "created_at": created, "today": today.isoformat(), "actor": actor, "risks": risks}
+    run = {"run_id": run_id, "created_at": created, "today": today.isoformat(), "actor": actor, "risks": risks,
+           "ml": {"delay_predictions": delay_predictions, "miss_probabilities": miss_probabilities}}
     store.set(models.RISK_RUNS, run_id, run)
     store.set(models.META, "latest_run", {"run_id": run_id})
     history = (store.get(models.META, "run_history") or {"ids": []})["ids"] + [run_id]
@@ -109,6 +115,15 @@ def run_and_store(store, today=None, actor="system"):
 def latest_run(store):
     pointer = store.get(models.META, "latest_run")
     return store.get(models.RISK_RUNS, pointer["run_id"]) if pointer else None
+
+
+def previous_run(store):
+    pointer = store.get(models.META, "latest_run")
+    if not pointer:
+        return None
+    ids = [run_id for run_id in (store.get(models.META, "run_history") or {}).get("ids", [])
+           if run_id != pointer["run_id"]]
+    return store.get(models.RISK_RUNS, ids[-1]) if ids else None
 
 
 def latest_allocations(store):

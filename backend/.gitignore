@@ -8,3 +8,4 @@ __pycache__/
 sim/data/
 app/ml/artifacts/
 *.log
+venv/

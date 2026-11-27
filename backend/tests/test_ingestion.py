@@ -14,7 +14,7 @@ def received(event_id, qty=5000):
 def test_duplicate_is_not_applied_twice(store):
     assert ingestion.process_event(store, received("EVT1001")).status == "APPLIED"
     assert ingestion.process_event(store, received("EVT1001")).status == "DUPLICATE"
-    assert store.get(models.BALANCES, "CELL_21700")["on_hand"] == 65000
+    assert store.get(models.BALANCES, "CELL_21700")["on_hand"] == 82000
 
 
 def test_negative_stock_rejected_and_alerted(store):

@@ -28,6 +28,20 @@ def raise_alert(store, kind, severity, message, ref_id):
     return store.atomic(run)
 
 
+def resolve_alert(store, kind, ref_id, user="system"):
+    alert_id = f"{kind}__{ref_id}"
+
+    def run(tx):
+        alert = tx.get(models.ALERTS, alert_id)
+        if not alert or alert["status"] == "RESOLVED":
+            return False
+        tx.set(models.ALERTS, alert_id, {**alert, "status": "RESOLVED",
+                                         "resolved_at": now_iso(), "resolved_by": user})
+        return True
+
+    return store.atomic(run)
+
+
 def from_run(store, state, allocations, risks, previous, today):
     from app.services.risk import shortages
 
@@ -36,6 +50,8 @@ def from_run(store, state, allocations, risks, previous, today):
         if r["risk_level"] == "HIGH" and r["order_id"] not in was_high:
             raise_alert(store, "HIGH_RISK_ORDER", "HIGH",
                         f"{r['order_id']} is HIGH risk, bottleneck {r['bottleneck_material']}", r["order_id"])
+        elif r["risk_level"] != "HIGH":
+            resolve_alert(store, "HIGH_RISK_ORDER", r["order_id"])
     for item in shortages(state, allocations, today):
         material_id = item["material_id"]
         if item["needed_by"] and date.fromisoformat(item["needed_by"]) <= today + timedelta(days=2):

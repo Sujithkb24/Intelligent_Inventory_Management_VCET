@@ -14,8 +14,10 @@ MATERIALS = [
     ("MOTOR_HUB", "MECHANICAL", 150), ("CTRL_INV", "ELECTRONICS", 150), ("MCU_AUTO", "ELECTRONICS", 200),
     ("MCU_AUTO_B", "ELECTRONICS", 0), ("OBC_33", "ELECTRONICS", 50), ("HARNESS_S", "MECHANICAL", 200),
     ("DISPLAY_TFT", "ELECTRONICS", 150), ("PACK_3K", "SUBASSY", 0),
+    ("SENSOR_LIDAR", "ELECTRONICS", 80), ("BATT_LFP", "CELL", 3000),
 ]
-PRODUCTS = [("SCOOT_S", "EV scooter", 100), ("SCOOT_P", "EV scooter Pro", 80), ("HATCH_C", "Compact EV", 40)]
+PRODUCTS = [("SCOOT_S", "EV scooter", 100), ("SCOOT_P", "EV scooter Pro", 80), ("HATCH_C", "Compact EV", 40),
+            ("SCOOT_X", "EV scooter X", 60)]
 SCOOTER = {"PACK_3K": 1, "MOTOR_HUB": 1, "CTRL_INV": 1, "MCU_AUTO": 1, "HARNESS_S": 1, "DISPLAY_TFT": 1}
 BOMS = {
     "PACK_3K": {"CELL_21700": 100, "BMS_V2": 1, "PACK_CASE": 1},
@@ -23,6 +25,8 @@ BOMS = {
     "SCOOT_P": {**SCOOTER, "OBC_33": 1},
     "HATCH_C": {"PACK_3K": 8, "MOTOR_HUB": 2, "CTRL_INV": 2, "MCU_AUTO": 3, "OBC_33": 1,
                 "HARNESS_S": 4, "DISPLAY_TFT": 1},
+    "SCOOT_X": {"PACK_3K": 1, "BATT_LFP": 1, "MOTOR_HUB": 2, "CTRL_INV": 1, "SENSOR_LIDAR": 1,
+                "HARNESS_S": 1, "DISPLAY_TFT": 1},
 }
 SUPPLIERS = [("SUP_A", "Supplier A", "TW", 0.92), ("SUP_B", "Supplier B", "CN", 0.80),
              ("SUP_C", "Supplier C", "KR", 0.90), ("SUP_D", "Supplier D", "IN", 0.95),
@@ -34,6 +38,8 @@ OFFERS = [
     ("SUP_A", "MCU_AUTO", 7, 17.0, 200, 50), ("SUP_B", "MCU_AUTO", 84, 14.0, 500, 100),
     ("SUP_E", "MCU_AUTO_B", 56, 19.0, 200, 50), ("SUP_E", "OBC_33", 21, 70.0, 20, 10),
     ("SUP_D", "HARNESS_S", 7, 12.0, 100, 20), ("SUP_B", "DISPLAY_TFT", 18, 25.0, 100, 20),
+    ("SUP_E", "SENSOR_LIDAR", 56, 120.0, 20, 10), ("SUP_D", "BATT_LFP", 21, 18.0, 200, 50),
+    ("SUP_C", "BATT_LFP", 35, 15.0, 500, 100),
 ]
 
 
@@ -64,14 +70,17 @@ def event(event_id, kind, ts, **fields):
 
 def demo_events(today):
     ts = datetime.combine(today, datetime.min.time())
-    stock = {"CELL_21700": 60000, "BMS_V2": 600, "PACK_CASE": 600, "MOTOR_HUB": 600, "CTRL_INV": 600,
-             "MCU_AUTO": 300, "HARNESS_S": 600, "DISPLAY_TFT": 600, "OBC_33": 100}
+    stock = {"CELL_21700": 77000, "BMS_V2": 770, "PACK_CASE": 770, "MOTOR_HUB": 710, "CTRL_INV": 650,
+             "MCU_AUTO": 460, "HARNESS_S": 690, "DISPLAY_TFT": 630, "OBC_33": 100,
+             "SENSOR_LIDAR": 40, "BATT_LFP": 60}
     events = [event(f"SEED-STOCK-{m}", "INVENTORY_RECEIVED", ts, material_id=m, quantity=q)
               for m, q in stock.items()]
-    for index, days in enumerate((14, 16, 18)):
-        order_id = f"O10{index + 1}"
+    orders = [("O101", "SCOOT_S", 150, 14), ("O102", "SCOOT_S", 150, 16), ("O103", "SCOOT_S", 150, 18),
+              ("O107", "SCOOT_X", 60, 25), ("O104", "SCOOT_S", 60, 17), ("O105", "SCOOT_P", 40, 17),
+              ("O106", "HATCH_C", 20, 17)]
+    for index, (order_id, product_id, qty, days) in enumerate(orders):
         events.append(event(f"SEED-{order_id}", "ORDER_CREATED", ts + timedelta(seconds=index + 1),
-                            order_id=order_id, product_id="SCOOT_S", quantity=150,
+                            order_id=order_id, product_id=product_id, quantity=qty,
                             crd=(today + timedelta(days=days)).isoformat()))
     return events
 
@@ -96,7 +105,7 @@ def build_world(seed, today, order_count=200):
         state.bom.setdefault(row["parent_id"], []).append(row)
     state.alternates = {"MCU_AUTO": ["MCU_AUTO_B"]}
     for index in range(order_count):
-        product = rng.choices(["SCOOT_S", "SCOOT_P", "HATCH_C"], [6, 3, 1])[0]
+        product = rng.choices(["SCOOT_S", "SCOOT_P", "HATCH_C", "SCOOT_X"], [6, 3, 1, 1])[0]
         qty = rng.randint(2, 8) if product == "HATCH_C" else rng.randint(10, 40)
         if rng.random() < 0.03:
             qty *= 4

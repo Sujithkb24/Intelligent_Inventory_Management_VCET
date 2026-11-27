@@ -55,6 +55,7 @@ def supply_timeline(state, today, use_prediction=True):
 
 def incoming_pos(state, material_id, today, use_prediction=True):
     rows = [{"po_id": p["po_id"], "supplier_id": p["supplier_id"], "qty": p["qty"],
+             "promised_date": p["promised_date"], "predicted_date": p.get("predicted_date"),
              "effective_date": effective_date(p, today, use_prediction).isoformat()}
             for p in state.purchase_orders.values()
             if p["material_id"] == material_id and p["status"] == "OPEN"]
