@@ -56,6 +56,7 @@ export const decisionSchema = z.discriminatedUnion('decision', [
 ]);
 
 export const newOrderSchema = z.object({
+  order_id: z.string().min(2, 'Required').regex(/^[A-Za-z0-9_.:-]+$/, 'Letters, numbers, _ . : - only'),
   product: z.string().min(1, 'Required'),
   qty: z.number({ invalid_type_error: 'Required' }).int().positive('Must be greater than 0'),
   crd: z.string().min(1, 'Required'),

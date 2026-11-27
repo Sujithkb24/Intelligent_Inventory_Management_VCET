@@ -91,6 +91,7 @@ export interface Order {
   projected_ship_date?: string;
   bottleneck_material?: string | null;
   miss_probability?: number | null;
+  risk?: OrderRisk | null;
 }
 
 export interface RiskRun {

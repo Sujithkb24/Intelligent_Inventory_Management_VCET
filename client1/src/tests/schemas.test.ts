@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decisionSchema, eventBatchSchema, eventSchema } from '../lib/schemas';
+import { decisionSchema, eventBatchSchema, eventSchema, newOrderSchema } from '../lib/schemas';
 
 const base = { event_id: 'EVT-1', timestamp: '2026-01-01T00:00:00Z', source: 'test' };
 
@@ -19,6 +19,14 @@ describe('eventSchema', () => {
   });
   it('batch requires at least one event', () => {
     expect(eventBatchSchema.safeParse([]).success).toBe(false);
+  });
+});
+
+describe('newOrderSchema', () => {
+  it('requires a safe order_id alongside product, qty and crd', () => {
+    expect(newOrderSchema.safeParse({ order_id: 'O-1', product: 'SCOOT_X', qty: 10, crd: '2026-12-20' }).success).toBe(true);
+    expect(newOrderSchema.safeParse({ product: 'SCOOT_X', qty: 10, crd: '2026-12-20' }).success).toBe(false);
+    expect(newOrderSchema.safeParse({ order_id: 'bad id', product: 'SCOOT_X', qty: 10, crd: '2026-12-20' }).success).toBe(false);
   });
 });
 

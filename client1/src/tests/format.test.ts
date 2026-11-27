@@ -8,6 +8,10 @@ describe('formatters', () => {
   it('formats probability as a percentage', () => {
     expect(fmtProb(0.37)).toBe('37%');
   });
+  it('renders small non-zero probabilities as less than one percent', () => {
+    expect(fmtProb(0.0031)).toBe('<1%');
+    expect(fmtProb(0)).toBe('0%');
+  });
   it('uses thousand separators', () => {
     expect(fmtNum(12345)).toBe('12,345');
   });

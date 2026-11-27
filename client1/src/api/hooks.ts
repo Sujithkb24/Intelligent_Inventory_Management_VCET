@@ -69,7 +69,7 @@ export function usePostEventsBatch() {
 
 export function useCreateOrder() {
   const qc = useQueryClient();
-  return useMutation<unknown, ApiError, { product: string; qty: number; crd: string }>({
+  return useMutation<unknown, ApiError, { order_id: string; product_id: string; qty: number; crd: string }>({
     mutationFn: E.createOrder,
     onSuccess: () => inv(qc, 'orders', 'risk', 'shortages'),
   });
@@ -77,7 +77,7 @@ export function useCreateOrder() {
 
 export function useRunRisk() {
   const qc = useQueryClient();
-  return useMutation<unknown, ApiError, void>({
+  return useMutation<E.RiskRunResult, ApiError, void>({
     mutationFn: () => E.runRisk(),
     onSuccess: () => inv(qc, 'risk', 'orders', 'shortages', 'alerts'),
   });

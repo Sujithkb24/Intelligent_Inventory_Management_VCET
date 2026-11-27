@@ -67,7 +67,18 @@ export const getMaterial = async (id: string): Promise<MaterialDetail> => {
 
 /* ---------- orders ---------- */
 export const getOrders = async (risk?: string): Promise<Order[]> =>
-  asList<Order>(await data<any>(api.get('/orders', { params: risk ? { risk } : undefined })), 'orders', 'items');
+  asList<any>(await data<any>(api.get('/orders', { params: risk ? { risk } : undefined })), 'orders', 'items')
+    .map((o) => {
+      const r = o.risk ?? {};
+      return {
+        ...o,
+        risk_level: o.risk_level ?? r.risk_level ?? undefined,
+        slack_days: o.slack_days ?? r.slack_days ?? undefined,
+        projected_ship_date: o.projected_ship_date ?? r.projected_ship_date ?? undefined,
+        bottleneck_material: o.bottleneck_material ?? r.bottleneck_material ?? undefined,
+        miss_probability: o.miss_probability ?? r.miss_probability ?? undefined,
+      };
+    });
 
 export const getOrder = async (id: string): Promise<OrderDetail> => {
   const d = await data<any>(api.get(`/orders/${encodeURIComponent(id)}`));
@@ -79,11 +90,18 @@ export const getOrder = async (id: string): Promise<OrderDetail> => {
   };
 };
 
-export const createOrder = (body: { product: string; qty: number; crd: string }) =>
+export const createOrder = (body: { order_id: string; product_id: string; qty: number; crd: string }) =>
   data<any>(api.post('/orders', body));
 
 /* ---------- risk ---------- */
-export const runRisk = () => data<any>(api.post('/risk/run'));
+export interface RiskRunResult {
+  run_id: string;
+  orders: number;
+  high: number;
+  ml: { delay_predictions: number; miss_probabilities: number };
+}
+
+export const runRisk = () => data<RiskRunResult>(api.post('/risk/run'));
 
 export const getLatestRisk = async (): Promise<RiskRun> => {
   const d = await data<any>(api.get('/risk/latest'));
@@ -96,16 +114,18 @@ export const getLatestRisk = async (): Promise<RiskRun> => {
 };
 
 /* ---------- simulate ---------- */
-export const simulate = async (body: SimulationIn): Promise<SimDiffRow[]> => {
-  const d = await data<any>(api.post('/simulate', body));
-  return asList<any>(d, 'diff', 'orders', 'results').map((r: any) => ({
+export function parseSimResult(d: any): SimDiffRow[] {
+  return asList<any>(d, 'changes', 'diff', 'orders', 'results').map((r: any) => ({
     order_id: r.order_id,
     slack_before: r.slack_before ?? r.before?.slack_days ?? null,
     slack_after: r.slack_after ?? r.after?.slack_days ?? null,
     risk_before: r.risk_before ?? r.before?.risk_level ?? null,
     risk_after: r.risk_after ?? r.after?.risk_level ?? null,
   }));
-};
+}
+
+export const simulate = async (body: SimulationIn): Promise<SimDiffRow[]> =>
+  parseSimResult(await data<any>(api.post('/simulate', body)));
 
 /* ---------- suppliers ---------- */
 export const getSuppliers = async (): Promise<Supplier[]> =>

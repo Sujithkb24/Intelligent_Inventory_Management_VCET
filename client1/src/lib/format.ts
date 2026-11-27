@@ -15,6 +15,8 @@ export function fmtMoney(n: number | null | undefined): string {
 
 export function fmtPct(p: number | null | undefined): string {
   if (p === null || p === undefined || Number.isNaN(p)) return EM_DASH;
+  if (p === 0) return '0%';
+  if (p > 0 && p < 0.01) return '<1%';
   return `${(p * 100).toFixed(0)}%`;
 }
 

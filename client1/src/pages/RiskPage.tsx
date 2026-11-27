@@ -15,7 +15,7 @@ export default function RiskPage() {
   const triggerRun = () => {
     toast('Risk run started', 'info');
     run.mutate(undefined, {
-      onSuccess: () => toast('Risk run complete', 'success'),
+      onSuccess: (r) => toast(`Risk run complete · ML: ${r.ml.miss_probabilities} scores, ${r.ml.delay_predictions} PO dates`, 'success'),
       onError: (e) => e.status !== 403 && toast(e.message, 'error'),
     });
   };

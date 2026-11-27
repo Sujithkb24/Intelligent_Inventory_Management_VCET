@@ -19,5 +19,5 @@ export const config = {
   agentTimeoutMs: 120000,
   reliabilityWarn: 0.85,
   // Reference data fallback (no products endpoint in the backend blueprint)
-  products: ['SCOOT_S', 'SCOOT_P', 'HATCH_C'] as const,
+  products: ['SCOOT_S', 'SCOOT_P', 'HATCH_C', 'SCOOT_X'] as const,
 };

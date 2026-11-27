@@ -12,6 +12,8 @@ import { newOrderSchema, type NewOrderForm } from '../lib/schemas';
 import { toast } from '../lib/toast';
 
 const CHIPS = ['ALL', 'HIGH', 'MEDIUM', 'LOW'] as const;
+const suggestedOrderId = () => `O-${Date.now().toString(36).toUpperCase()}`;
+const suggestedCrd = () => new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
 
 function NewOrderDialog({ onClose }: { onClose: () => void }) {
   const create = useCreateOrder();
@@ -23,7 +25,7 @@ function NewOrderDialog({ onClose }: { onClose: () => void }) {
     formState: { errors },
   } = useForm<NewOrderForm>({
     resolver: zodResolver(newOrderSchema),
-    defaultValues: { product: config.products[0], qty: 10, crd: '' },
+    defaultValues: { order_id: suggestedOrderId(), product: config.products[0], qty: 10, crd: suggestedCrd() },
   });
 
   if (created) {
@@ -51,12 +53,20 @@ function NewOrderDialog({ onClose }: { onClose: () => void }) {
       <form
         className="space-y-4"
         onSubmit={handleSubmit((v) =>
-          create.mutate(v, {
-            onSuccess: () => setCreated(true),
-            onError: (e) => e.status !== 403 && toast(e.message, 'error'),
-          }),
+          create.mutate(
+            { order_id: v.order_id, product_id: v.product, qty: v.qty, crd: v.crd },
+            {
+              onSuccess: () => setCreated(true),
+              onError: (e) => e.status !== 403 && toast(e.message, 'error'),
+            },
+          ),
         )}
       >
+        <div>
+          <label className="label">Order ID</label>
+          <input className="input" {...register('order_id')} />
+          <FieldError msg={errors.order_id?.message} />
+        </div>
         <div>
           <label className="label">Product</label>
           <select className="input" {...register('product')}>
@@ -163,7 +173,7 @@ export default function OrdersPage() {
                 </thead>
                 <tbody>
                   {rows.map((o) => {
-                    const r = riskMap.get(o.order_id);
+                    const r = riskMap.get(o.order_id) ?? o.risk ?? null;
                     const level = o.risk_level ?? r?.risk_level;
                     const slack = o.slack_days ?? r?.slack_days;
                     const bottleneck = o.bottleneck_material ?? r?.bottleneck_material;

@@ -5,7 +5,7 @@ import type { RiskLevel, SimDiffRow, SimulationIn } from '../api/types';
 import { Banner, EmptyState, ErrorPanel, PageHeader, RiskBadge } from '../components/common/common';
 import { fmtSlack } from '../lib/format';
 
-interface FormVals {
+export interface FormVals {
   supplier_delays: { po_id: string; supplier_id: string; material_id: string; delay_days: number }[];
   demand_changes: { order_id: string; new_qty: number }[];
   extra_receipts: { material_id: string; qty: number; date: string }[];
@@ -13,8 +13,51 @@ interface FormVals {
 
 const ORDER: Record<RiskLevel, number> = { LOW: 0, MEDIUM: 1, HIGH: 2 };
 
+function localIsoDate(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+export function simulationBody(v: FormVals): SimulationIn {
+  return {
+    supplier_delays: v.supplier_delays
+      .filter((d) => d.po_id || d.supplier_id || d.material_id)
+      .map((d) => ({
+        ...(d.po_id ? { po_id: d.po_id } : {}),
+        ...(d.supplier_id ? { supplier_id: d.supplier_id } : {}),
+        ...(d.material_id ? { material_id: d.material_id } : {}),
+        delay_days: d.delay_days,
+      })),
+    demand_changes: v.demand_changes.filter((d) => d.order_id),
+    extra_receipts: v.extra_receipts,
+  };
+}
+
+export function scenarioError(v: FormVals): string | null {
+  const hasSupplierDelay = v.supplier_delays.some((r) => r.po_id || r.supplier_id || r.material_id);
+  if (hasSupplierDelay && v.supplier_delays.some((r) => !Number.isFinite(r.delay_days) || r.delay_days <= 0)) {
+    return 'Supplier delays need a delay greater than 0 days.';
+  }
+  if (v.demand_changes.some((r) => r.order_id && (!Number.isFinite(r.new_qty) || r.new_qty < 0))) {
+    return 'Demand changes need a quantity of 0 or more.';
+  }
+  if (
+    v.extra_receipts.length > 0 &&
+    v.extra_receipts.some((r) => !r.material_id || !r.date || !Number.isFinite(r.qty) || r.qty <= 0)
+  ) {
+    return 'Extra receipts need a material, quantity greater than 0 and date.';
+  }
+  return null;
+}
+
 function DiffTable({ rows }: { rows: SimDiffRow[] }) {
-  if (rows.length === 0) return <EmptyState title="No differences" hint="The scenario did not change any order." />;
+  if (rows.length === 0)
+    return (
+      <EmptyState
+        title="No differences"
+        hint="The scenario did not change any order. For receipts, use a date on or before the need-by date; try the MCU_AUTO preset."
+      />
+    );
   return (
     <div className="card overflow-x-auto p-0">
       <table className="w-full border-collapse">
@@ -70,6 +113,7 @@ function DiffTable({ rows }: { rows: SimDiffRow[] }) {
 export default function SimulatorPage() {
   const sim = useSimulate();
   const [result, setResult] = useState<SimDiffRow[] | null>(null); // last result stays so users can tweak and rerun
+  const [formError, setFormError] = useState<string | null>(null);
   const { register, control, handleSubmit, reset } = useForm<FormVals>({
     defaultValues: { supplier_delays: [], demand_changes: [], extra_receipts: [] },
   });
@@ -77,20 +121,21 @@ export default function SimulatorPage() {
   const demand = useFieldArray({ control, name: 'demand_changes' });
   const receipts = useFieldArray({ control, name: 'extra_receipts' });
 
+  const applyPreset = (values: FormVals) => {
+    reset(values);
+    setFormError(null);
+    setResult(null);
+  };
+
   const submit = (v: FormVals) => {
-    const body: SimulationIn = {
-      supplier_delays: v.supplier_delays
-        .filter((d) => !Number.isNaN(d.delay_days))
-        .map((d) => ({
-          ...(d.po_id ? { po_id: d.po_id } : {}),
-          ...(d.supplier_id ? { supplier_id: d.supplier_id } : {}),
-          ...(d.material_id ? { material_id: d.material_id } : {}),
-          delay_days: d.delay_days,
-        })),
-      demand_changes: v.demand_changes.filter((d) => d.order_id && !Number.isNaN(d.new_qty)),
-      extra_receipts: v.extra_receipts.filter((r) => r.material_id && r.date && !Number.isNaN(r.qty)),
-    };
-    sim.mutate(body, { onSuccess: setResult });
+    const problem = scenarioError(v);
+    if (problem) {
+      setFormError(problem);
+      setResult(null);
+      return;
+    }
+    setFormError(null);
+    sim.mutate(simulationBody(v), { onSuccess: setResult });
   };
 
   return (
@@ -104,7 +149,7 @@ export default function SimulatorPage() {
             type="button"
             className="btn"
             onClick={() =>
-              reset({
+              applyPreset({
                 supplier_delays: [{ po_id: '', supplier_id: 'SUP_A', material_id: 'MCU_AUTO', delay_days: 5 }],
                 demand_changes: [],
                 extra_receipts: [],
@@ -112,6 +157,19 @@ export default function SimulatorPage() {
             }
           >
             Preset: SUP_A delays MCU_AUTO PO by 5 days
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={() =>
+              applyPreset({
+                supplier_delays: [],
+                demand_changes: [],
+                extra_receipts: [{ material_id: 'MCU_AUTO', qty: 150, date: localIsoDate(new Date()) }],
+              })
+            }
+          >
+            Preset: receive 150 MCU_AUTO today
           </button>
         </div>
 
@@ -157,15 +215,20 @@ export default function SimulatorPage() {
         <section className="card">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-base font-semibold text-[var(--text-primary)]">Extra receipts</h2>
-            <button type="button" className="btn" onClick={() => receipts.append({ material_id: '', qty: 0, date: '' })}>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => receipts.append({ material_id: 'MCU_AUTO', qty: 150, date: localIsoDate(new Date()) })}
+            >
               Add
             </button>
           </div>
+          <p className="label">Use a date on or before the material need-by date, or the receipt will be late.</p>
           {receipts.fields.map((f, i) => (
             <div key={f.id} className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-4">
-              <input className="input" placeholder="Material id" {...register(`extra_receipts.${i}.material_id`)} />
-              <input className="input" type="number" placeholder="Qty" {...register(`extra_receipts.${i}.qty`, { valueAsNumber: true })} />
-              <input className="input" type="date" {...register(`extra_receipts.${i}.date`)} />
+              <input className="input" placeholder="Material id" required {...register(`extra_receipts.${i}.material_id`)} />
+              <input className="input" type="number" min="1" placeholder="Qty" required {...register(`extra_receipts.${i}.qty`, { valueAsNumber: true })} />
+              <input className="input" type="date" required {...register(`extra_receipts.${i}.date`)} />
               <button type="button" className="btn" onClick={() => receipts.remove(i)}>
                 Remove
               </button>
@@ -179,6 +242,7 @@ export default function SimulatorPage() {
       </form>
 
       <div className="mt-5">
+        {formError && <div role="alert" className="mb-3 rounded-[8px] border border-[#F3C5C2] bg-[#FDECEA] p-3 text-sm text-[#B42318]">{formError}</div>}
         {sim.isError && <ErrorPanel error={sim.error} />}
         {result && (
           <>
