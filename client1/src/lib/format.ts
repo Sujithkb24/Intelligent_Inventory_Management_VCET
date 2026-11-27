@@ -51,6 +51,20 @@ export function fmtDisplayDate(d: string | null | undefined): string {
   });
 }
 
+export function fmtProjectedShip(
+  ship: string | null | undefined,
+  crd: string | null | undefined,
+  slack: number | null | undefined,
+): string {
+  if (ship) return fmtDisplayDate(ship);
+  if (!crd || slack === null || slack === undefined) return EM_DASH;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(crd.trim());
+  if (!m) return EM_DASH;
+  const dt = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  dt.setUTCDate(dt.getUTCDate() - slack);
+  return `~ ${fmtDisplayDate(dt.toISOString().slice(0, 10))}`;
+}
+
 /** Format timestamp as "27 Nov 2026, 14:42". */
 export function fmtDisplayDateTime(d: string | null | undefined): string {
   if (!d) return EM_DASH;

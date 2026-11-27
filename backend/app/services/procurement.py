@@ -5,6 +5,7 @@ from math import ceil
 from app import models
 from app.config import settings
 from app.db import now_iso
+from app.ml import predict
 from app.services.risk import evaluate, shortages
 
 
@@ -50,7 +51,7 @@ def supplier_options(state, material_id, gap, needed_by, today):
         options.append({"supplier_id": offer["supplier_id"], "qty": qty, "unit_price": offer["unit_price"],
                         "est_cost": round(qty * offer["unit_price"], 2), "est_arrival": arrival.isoformat(),
                         "meets_crd": needed_by is None or arrival <= date.fromisoformat(needed_by),
-                        "reliability": supplier.get("reliability", 0.9),
+                         "reliability": predict.supplier_reliability(state, offer["supplier_id"], material_id, qty, today),
                         "single_source": len(offers) == 1 or bool(supplier.get("single_source"))})
     return sorted(options, key=lambda o: (not o["meets_crd"], -o["reliability"], o["est_cost"]))
 

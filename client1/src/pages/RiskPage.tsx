@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { InvestigateButton } from '../components/agent/InvestigatePanel';
 import { EmptyState, PageHeader, QueryBoundary, RiskBadge } from '../components/common/common';
 import { PlayIcon, SpinnerIcon } from '../components/common/Icons';
-import { fmtDisplayDate, fmtDisplayDateTime, fmtProb, fmtSlack } from '../lib/format';
+import { fmtDisplayDate, fmtDisplayDateTime, fmtProb, fmtProjectedShip, fmtSlack } from '../lib/format';
 import { toast } from '../lib/toast';
 
 export default function RiskPage() {
@@ -98,7 +98,9 @@ export default function RiskPage() {
                         </Link>
                       </td>
                       <td className="td whitespace-nowrap tabular-nums">{fmtDisplayDate(r.crd)}</td>
-                      <td className="td whitespace-nowrap tabular-nums">{fmtDisplayDate(r.projected_ship_date)}</td>
+                      <td className="td whitespace-nowrap tabular-nums" title="~ estimated from CRD and slack when supply is uncovered">
+                        {fmtProjectedShip(r.projected_ship_date, r.crd, r.slack_days)}
+                      </td>
                       <td
                         className={`td whitespace-nowrap text-right tabular-nums ${
                           r.slack_days < 0 ? 'font-semibold text-[var(--risk-high-text)]' : ''

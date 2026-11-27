@@ -5,7 +5,7 @@ from math import ceil
 from app import models
 from app.config import settings
 from app.db import new_id, now_iso
-from app.services.allocation import run_allocation, sorted_orders
+from app.services.allocation import production_days, run_allocation, sorted_orders
 from app.services.inventory import load_state
 
 
@@ -29,6 +29,8 @@ def compute_risk(state, allocations, today, buffer_days=None):
         ship = slack = bottleneck = None
         if missing:
             bottleneck = max(missing, key=lambda r: (r["required"] - r["allocated"]) / r["required"])["material_id"]
+            tail = product.get("testing_days", 1) + product.get("shipping_days", 2)
+            slack = -(production_days(product, order["qty"]) + tail)
         elif rows:
             worst = max(rows, key=lambda r: (r["ready_date"], r["late_qty"]))
             ready = date.fromisoformat(worst["ready_date"])

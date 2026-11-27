@@ -195,6 +195,17 @@ export interface MaterialDetail {
   suppliers: string[];
 }
 
+export interface PurchaseOrder {
+  po_id: string;
+  supplier_id?: string | null;
+  material_id: string;
+  qty: number;
+  promised_date: string;
+  predicted_date?: string | null;
+  effective_date: string;
+  status?: string;
+}
+
 export interface OrderDetail {
   order: Order;
   bom_demand: { material_id: string; qty: number }[];

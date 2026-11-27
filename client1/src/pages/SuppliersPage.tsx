@@ -69,7 +69,7 @@ export default function SuppliersPage() {
                     <th scope="col" className="th">
                       Country
                     </th>
-                    <th scope="col" className="th w-56">
+                    <th scope="col" className="th w-56" title="Derived from delay-regressor predictions">
                       Reliability
                     </th>
                     <th scope="col" className="th">

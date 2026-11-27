@@ -6,13 +6,15 @@ from app.services.risk import evaluate
 
 def apply_scenario(state, scenario, today):
     for delay in scenario.supplier_delays:
-        matched = [p for p in state.purchase_orders.values()
-                   if (delay.po_id and p["po_id"] == delay.po_id)
-                   or (not delay.po_id and (delay.supplier_id or delay.material_id)
-                       and (not delay.supplier_id or p["supplier_id"] == delay.supplier_id)
-                       and (not delay.material_id or p["material_id"] == delay.material_id))]
+        matched = [p for p in state.purchase_orders.values() if p.get("status") == "OPEN"
+                   and ((delay.po_id and p["po_id"] == delay.po_id)
+                        or (not delay.po_id and (delay.supplier_id or delay.material_id)
+                            and (not delay.supplier_id or p["supplier_id"] == delay.supplier_id)
+                            and (not delay.material_id or p["material_id"] == delay.material_id)))]
         if not matched:
-            raise ValueError("supplier delay matches no open PO")
+            available = ", ".join(sorted(p["po_id"] for p in state.purchase_orders.values()
+                                         if p.get("status") == "OPEN")) or "none"
+            raise ValueError(f"supplier delay matches no open PO; use a PO id from: {available}")
         for po in matched:
             po["sim_delay_days"] = po.get("sim_delay_days", 0) + delay.delay_days
     for change in scenario.demand_changes:

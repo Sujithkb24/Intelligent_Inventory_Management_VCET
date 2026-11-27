@@ -42,6 +42,11 @@ def effective_date(po, today, use_prediction=True):
     return max(arrival, today + timedelta(days=1)) if arrival < today else arrival
 
 
+def open_pos(state, today, use_prediction=True):
+    return [{**p, "effective_date": effective_date(p, today, use_prediction).isoformat()}
+            for p in sorted(state.purchase_orders.values(), key=lambda p: p["po_id"])]
+
+
 def supply_timeline(state, today, use_prediction=True):
     timeline = {m: [[today, q]] for m, q in state.on_hand.items() if q > 0}
     for po in state.purchase_orders.values():

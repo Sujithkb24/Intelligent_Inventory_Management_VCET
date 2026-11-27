@@ -7,7 +7,9 @@ pytest.importorskip("langgraph")
 
 from fastapi.testclient import TestClient
 
+from app import models
 from app.main import app
+from app.ml import predict
 
 
 def headers(role):
@@ -21,6 +23,24 @@ def test_create_order_matches_frontend_contract(store):
         assert client.post("/api/v1/orders", json=body, headers=planner).status_code == 201
         assert client.get("/api/v1/orders/O200", headers=planner).status_code == 200
         assert client.post("/api/v1/orders", json=body, headers=planner).status_code == 409
+
+
+def test_purchase_orders_endpoint_lists_open_pos(store):
+    store.set(models.PURCHASE_ORDERS, "PO-TEST", {
+        "po_id": "PO-TEST", "supplier_id": "SUP_A", "material_id": "MCU_AUTO", "qty": 200,
+        "status": "OPEN", "promised_date": "2026-12-04"})
+    with TestClient(app) as client:
+        rows = client.get("/api/v1/inventory/purchase-orders", headers=headers("production_planner")).json()
+    assert [r["po_id"] for r in rows] == ["PO-TEST"]
+    assert rows[0]["effective_date"] == "2026-12-04"
+
+
+def test_suppliers_endpoint_uses_model_reliability(store, monkeypatch):
+    monkeypatch.setattr(predict, "supplier_reliability", lambda *args, **kwargs: 0.5)
+    with TestClient(app) as client:
+        rows = client.get("/api/v1/suppliers", headers=headers("production_planner")).json()
+    assert rows
+    assert all(r["reliability"] == 0.5 for r in rows)
 
 
 def test_end_to_end(store):

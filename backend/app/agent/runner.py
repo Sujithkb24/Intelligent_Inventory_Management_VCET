@@ -10,7 +10,7 @@ from app.agent.policies import build_policy, parse_json
 from app.agent.tools import Toolbox
 from app.config import settings
 from app.db import audit, now_iso
-from app.services import alerts, inventory
+from app.services import alerts, inventory, risk
 
 
 class AgentState(TypedDict, total=False):
@@ -133,14 +133,28 @@ def execute(store, mode, target, prompt, actor):
     return outcome
 
 
+def current_bottleneck(store, order_id):
+    run = risk.latest_run(store)
+    if run:
+        row = next((r for r in run["risks"] if r["order_id"] == order_id), None)
+        if row:
+            return row.get("bottleneck_material")
+    state = inventory.load_state(store)
+    _, rows = risk.evaluate(state, settings.today(), settings.ml_enabled)
+    row = next((r for r in rows if r["order_id"] == order_id), None)
+    return row.get("bottleneck_material") if row else None
+
+
 def investigate(store, order_id, actor):
     order = store.get(models.ORDERS, order_id)
     if not order or order["status"] not in ("OPEN", "ALLOCATED"):
         return {"status": "NOT_FOUND", "message": "open order not found"}
-    existing = [r for r in store.list(models.RECOMMENDATIONS, status="PENDING")
-                if order_id in r["affected_orders"]]
-    if existing:
-        return {"status": "DRAFTED", "recommendation": existing[0]}
+    material = current_bottleneck(store, order_id)
+    if material:
+        existing = [r for r in store.list(models.RECOMMENDATIONS, status="PENDING")
+                    if order_id in r.get("affected_orders", []) and r.get("material_id") == material]
+        if existing:
+            return {"status": "DRAFTED", "recommendation": existing[0]}
     prompt = f"Investigate order {order_id} and draft a purchase order if one is needed."
     return execute(store, "investigate", order_id, prompt, actor)
 

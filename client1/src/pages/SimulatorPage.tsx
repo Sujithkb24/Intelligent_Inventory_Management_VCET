@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
-import { useSimulate } from '../api/hooks';
+import { usePurchaseOrders, useSimulate } from '../api/hooks';
 import type { RiskLevel, SimDiffRow, SimulationIn } from '../api/types';
 import { Banner, EmptyState, ErrorPanel, PageHeader, RiskBadge } from '../components/common/common';
 import { fmtSlack } from '../lib/format';
@@ -112,6 +112,10 @@ function DiffTable({ rows }: { rows: SimDiffRow[] }) {
 
 export default function SimulatorPage() {
   const sim = useSimulate();
+  const pos = usePurchaseOrders();
+  const poRows = pos.data ?? [];
+  const supplierIds = [...new Set(poRows.map((p) => p.supplier_id).filter((s): s is string => !!s))];
+  const materialIds = [...new Set(poRows.map((p) => p.material_id))];
   const [result, setResult] = useState<SimDiffRow[] | null>(null); // last result stays so users can tweak and rerun
   const [formError, setFormError] = useState<string | null>(null);
   const { register, control, handleSubmit, reset } = useForm<FormVals>({
@@ -142,6 +146,17 @@ export default function SimulatorPage() {
     <div>
       <PageHeader title="What-if simulator" />
       <Banner tone="blue">Simulation only. No real data was changed.</Banner>
+      <datalist id="sim-po-ids">
+        {poRows.map((p) => (
+          <option key={p.po_id} value={p.po_id}>{`${p.supplier_id ?? '—'} · ${p.material_id}`}</option>
+        ))}
+      </datalist>
+      <datalist id="sim-supplier-ids">
+        {supplierIds.map((s) => <option key={s} value={s} />)}
+      </datalist>
+      <datalist id="sim-material-ids">
+        {materialIds.map((m) => <option key={m} value={m} />)}
+      </datalist>
 
       <form onSubmit={handleSubmit(submit)} className="space-y-5">
         <div className="flex flex-wrap gap-2">
@@ -183,9 +198,9 @@ export default function SimulatorPage() {
           <p className="mb-3 text-xs text-[var(--text-muted)]">Choose a PO id, or a supplier plus material.</p>
           {delays.fields.map((f, i) => (
             <div key={f.id} className="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-5">
-              <input className="input" placeholder="PO id" {...register(`supplier_delays.${i}.po_id`)} />
-              <input className="input" placeholder="Supplier id" {...register(`supplier_delays.${i}.supplier_id`)} />
-              <input className="input" placeholder="Material id" {...register(`supplier_delays.${i}.material_id`)} />
+              <input className="input" list="sim-po-ids" placeholder="PO id" {...register(`supplier_delays.${i}.po_id`)} />
+              <input className="input" list="sim-supplier-ids" placeholder="Supplier id" {...register(`supplier_delays.${i}.supplier_id`)} />
+              <input className="input" list="sim-material-ids" placeholder="Material id" {...register(`supplier_delays.${i}.material_id`)} />
               <input className="input" type="number" placeholder="Delay days" {...register(`supplier_delays.${i}.delay_days`, { valueAsNumber: true })} />
               <button type="button" className="btn" onClick={() => delays.remove(i)}>
                 Remove

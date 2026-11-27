@@ -3,9 +3,11 @@ from functools import lru_cache
 from pathlib import Path
 
 from app import models
+from app.config import settings
 from app.ml import features
 
 ARTIFACTS = Path(__file__).resolve().parent / "artifacts"
+RELIABILITY_HORIZON_DAYS = 7
 
 
 @lru_cache(maxsize=4)
@@ -35,6 +37,23 @@ def delay_days(state, supplier_id, material_id, qty, today):
         qty, offer.get("typical_qty", offer.get("moq", 1)), today.month, supplier.get("recent_delay", 0),
         supplier.get("country"), offer.get("moq", 1))
     return max(int(round(float(model.predict([row])[0]))), 0)
+
+
+def supplier_reliability(state, supplier_id, material_id, qty=None, today=None):
+    supplier = state.suppliers.get(supplier_id)
+    if supplier is None:
+        return 0.9
+    fallback = float(supplier.get("reliability", 0.9))
+    offer = next((o for o in state.supplier_materials
+                  if o["supplier_id"] == supplier_id and o["material_id"] == material_id), None)
+    if load_model("delay") is None or offer is None:
+        return fallback
+    today = today or settings.today()
+    moq = offer.get("moq", 1)
+    quantities = [qty] if qty else sorted({moq, offer.get("typical_qty", moq * 2), moq * 3})
+    delays = [delay_days(state, supplier_id, material_id, q, today) for q in quantities]
+    mean_delay = sum(delays) / len(delays)
+    return round(max(0.0, min(1.0, 1.0 - mean_delay / RELIABILITY_HORIZON_DAYS)), 2)
 
 
 def save_prediction(store, po_id, predicted):

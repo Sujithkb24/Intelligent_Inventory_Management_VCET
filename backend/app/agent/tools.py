@@ -1,5 +1,6 @@
 from app.config import settings
 from app.db import new_id
+from app.ml import predict
 from app.schemas import SimulationIn
 from app.services import inventory, procurement, risk, simulation
 
@@ -32,7 +33,9 @@ class Toolbox:
         for offer in self.state.supplier_materials:
             if offer["material_id"] == material_id:
                 supplier = self.state.suppliers[offer["supplier_id"]]
-                rows.append({**offer, "name": supplier.get("name"), "reliability": supplier.get("reliability"),
+                rows.append({**offer, "name": supplier.get("name"),
+                             "reliability": predict.supplier_reliability(self.state, offer["supplier_id"],
+                                                                         material_id, today=self.today),
                              "single_source": bool(supplier.get("single_source"))})
         return {"material_id": material_id, "suppliers": rows,
                 "alternates": self.state.alternates.get(material_id, [])}

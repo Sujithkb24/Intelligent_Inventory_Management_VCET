@@ -15,6 +15,7 @@ import type {
   Order,
   OrderDetail,
   OrderRisk,
+  PurchaseOrder,
   Recommendation,
   RiskRun,
   ShortageItem,
@@ -64,6 +65,9 @@ export const getMaterial = async (id: string): Promise<MaterialDetail> => {
   }));
   return { position, timeline, incoming_pos, suppliers: asList<string>(d.suppliers ?? d.supplier_ids) };
 };
+
+export const getPurchaseOrders = async (): Promise<PurchaseOrder[]> =>
+  asList<PurchaseOrder>(await data<any>(api.get('/inventory/purchase-orders')), 'items', 'purchase_orders');
 
 /* ---------- orders ---------- */
 export const getOrders = async (risk?: string): Promise<Order[]> =>

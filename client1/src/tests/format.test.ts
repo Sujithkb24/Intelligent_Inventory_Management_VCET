@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fmtDisplayDate, fmtGap, fmtMoney, fmtNum, fmtProb, fmtSlack } from '../lib/format';
+import { fmtDisplayDate, fmtGap, fmtMoney, fmtNum, fmtProb, fmtProjectedShip, fmtSlack } from '../lib/format';
 
 describe('formatters', () => {
   it('renders null miss probability as an em dash', () => {
@@ -21,6 +21,11 @@ describe('formatters', () => {
   it('formats display dates as DD Mon YYYY', () => {
     expect(fmtDisplayDate('2026-12-05')).toBe('05 Dec 2026');
     expect(fmtDisplayDate(null)).toBe('—');
+  });
+  it('estimates projected ship from CRD and negative slack', () => {
+    expect(fmtProjectedShip(null, '2026-12-05', -5)).toBe('~ 10 Dec 2026');
+    expect(fmtProjectedShip('2026-12-05', '2026-12-05', -5)).toBe('05 Dec 2026');
+    expect(fmtProjectedShip(null, '2026-12-05', null)).toBe('—');
   });
   it('formats slack with explicit sign and days unit', () => {
     expect(fmtSlack(-12)).toBe('−12 d');

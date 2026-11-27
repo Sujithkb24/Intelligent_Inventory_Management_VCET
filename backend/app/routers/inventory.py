@@ -26,6 +26,12 @@ def shortage_list():
     return risk.shortages(state, allocations, today)
 
 
+@router.get("/purchase-orders")
+def purchase_orders():
+    state = inventory.load_state(get_store())
+    return inventory.open_pos(state, settings.today(), settings.ml_enabled)
+
+
 @router.get("/{material_id}")
 def detail(material_id: str):
     store = get_store()

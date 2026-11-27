@@ -1,5 +1,5 @@
 import clsx from 'clsx';
-import { fmtDisplayDate, fmtSlack } from '../../lib/format';
+import { fmtDisplayDate, fmtProjectedShip, fmtSlack } from '../../lib/format';
 
 /** Visual only: shows slack as returned by the API (CRD vs projected ship). */
 export function SlackBar({ slack, crd, ship }: { slack: number | null | undefined; crd?: string; ship?: string }) {
@@ -20,7 +20,9 @@ export function SlackBar({ slack, crd, ship }: { slack: number | null | undefine
         <span className={neg ? 'font-semibold text-[var(--risk-high-text)]' : 'font-medium text-[var(--text-secondary)]'}>
           {fmtSlack(slack)} slack
         </span>
-        <span>Ship {fmtDisplayDate(ship)}</span>
+        <span title="~ estimated from CRD and slack when supply is uncovered">
+          Ship {fmtProjectedShip(ship, crd, slack)}
+        </span>
       </div>
     </div>
   );

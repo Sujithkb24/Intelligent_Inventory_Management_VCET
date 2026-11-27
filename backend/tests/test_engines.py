@@ -77,6 +77,15 @@ def test_simulation_does_not_touch_real_state(store):
     assert "sim_delay_days" not in state.purchase_orders["PO-1"]
 
 
+def test_simulation_error_lists_available_pos(store):
+    state = inventory.load_state(store)
+    state.purchase_orders["PO-1"] = {"po_id": "PO-1", "supplier_id": "SUP_A", "material_id": "MCU_AUTO",
+                                     "qty": 200, "status": "OPEN", "promised_date": "2026-12-04"}
+    scenario = SimulationIn(supplier_delays=[{"po_id": "REC-STALE", "delay_days": 5}])
+    with pytest.raises(ValueError, match="PO-1"):
+        simulation.simulate(state, scenario, TODAY)
+
+
 def test_simulation_extra_receipt_rescues_o103(store):
     state = inventory.load_state(store)
     scenario = SimulationIn(extra_receipts=[{"material_id": "MCU_AUTO", "qty": 150, "date": "2026-12-05"}])
@@ -119,6 +128,23 @@ def test_incoming_pos_exposes_ml_dates(store):
     assert row["promised_date"] == "2026-12-01"
     assert row["predicted_date"] == "2026-12-04"
     assert row["effective_date"] == "2026-12-04"
+
+
+def test_supplier_reliability_uses_delay_predictions(store, monkeypatch):
+    state = inventory.load_state(store)
+    monkeypatch.setattr(predict, "load_model", lambda name: object() if name == "delay" else None)
+    monkeypatch.setattr(predict, "delay_days", lambda *args, **kwargs: 2)
+    score = predict.supplier_reliability(state, "SUP_A", "MCU_AUTO", today=TODAY)
+    assert score == 0.71
+    options = procurement.supplier_options(state, "MCU_AUTO", 150, "2026-12-10", TODAY)
+    assert all(o["reliability"] == 0.71 for o in options)
+
+
+def test_uncovered_order_has_negative_slack(store):
+    run = risk.run_and_store(store)
+    o103 = next(r for r in run["risks"] if r["order_id"] == "O103")
+    assert o103["risk_level"] == "HIGH"
+    assert o103["slack_days"] == -5
 
 
 def test_low_risk_clears_bottleneck(store):

@@ -7,7 +7,7 @@ import { useCreateOrder, useLatestRisk, useOrders, useRunRisk } from '../api/hoo
 import { useAuth } from '../auth/AuthContext';
 import { EmptyState, FieldError, Modal, PageHeader, QueryBoundary, RiskBadge } from '../components/common/common';
 import { config } from '../config';
-import { fmtDisplayDate, fmtNum, fmtProb, fmtSlack } from '../lib/format';
+import { fmtDisplayDate, fmtNum, fmtProb, fmtProjectedShip, fmtSlack } from '../lib/format';
 import { newOrderSchema, type NewOrderForm } from '../lib/schemas';
 import { toast } from '../lib/toast';
 
@@ -188,8 +188,12 @@ export default function OrdersPage() {
                         <td className="td">{o.product ?? '—'}</td>
                         <td className="td text-right tabular-nums">{fmtNum(o.qty)}</td>
                         <td className="td whitespace-nowrap tabular-nums">{fmtDisplayDate(o.crd ?? r?.crd)}</td>
-                        <td className="td whitespace-nowrap tabular-nums">
-                          {fmtDisplayDate(o.projected_ship_date ?? r?.projected_ship_date)}
+                        <td className="td whitespace-nowrap tabular-nums" title="~ estimated from CRD and slack when supply is uncovered">
+                          {fmtProjectedShip(
+                            o.projected_ship_date ?? r?.projected_ship_date,
+                            o.crd ?? r?.crd,
+                            slack,
+                          )}
                         </td>
                         <td
                           className={`td whitespace-nowrap text-right tabular-nums ${

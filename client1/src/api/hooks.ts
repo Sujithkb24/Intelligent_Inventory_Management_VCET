@@ -20,6 +20,8 @@ export const useInventory = () => useQ(['inventory'], E.getInventory, { refetchI
 export const useMaterial = (id: string) =>
   useQ(['inventory', id], () => E.getMaterial(id), { refetchOnWindowFocus: true, enabled: !!id });
 export const useShortages = () => useQ(['shortages'], E.getShortages, { refetchInterval: config.pollInventoryMs });
+export const usePurchaseOrders = () =>
+  useQ(['purchase-orders'], E.getPurchaseOrders, { refetchInterval: config.pollInventoryMs });
 
 export const useOrders = (risk?: string, enabled = true) =>
   useQ(['orders', { risk: risk ?? null }], () => E.getOrders(risk), { refetchInterval: config.pollInventoryMs, enabled });
