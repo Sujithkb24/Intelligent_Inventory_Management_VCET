@@ -1,0 +1,10 @@
+.env
+serviceAccountKey.json
+*serviceAccount*.json
+*firebase-adminsdk*.json
+__pycache__/
+.venv/
+.pytest_cache/
+sim/data/
+app/ml/artifacts/
+*.log
