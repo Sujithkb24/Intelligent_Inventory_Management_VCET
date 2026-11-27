@@ -40,7 +40,7 @@ export default function DashboardPage() {
   const risk = useLatestRisk(canViewOrders);
   const shortages = useShortages();
   const alerts = useAlerts(session?.role ?? undefined);
-  const recs = useRecs('PENDING', can('view_recs'));
+  const recs = useRecs('PENDING', canViewRecs);
   const run = useRunRisk();
   const reducedMotion = usePrefersReducedMotion();
 
@@ -54,7 +54,7 @@ export default function DashboardPage() {
   const triggerRunRisk = () => {
     toast('Risk run started', 'info');
     run.mutate(undefined, {
-      onSuccess: (r) => toast(`Risk run complete · ML: ${r.ml.miss_probabilities} scores, ${r.ml.delay_predictions} PO dates`, 'success'),
+      onSuccess: () => toast('Risk run complete', 'success'),
       onError: (e) => e.status !== 403 && toast(e.message, 'error'),
     });
   };

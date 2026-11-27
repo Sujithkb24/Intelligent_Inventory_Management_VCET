@@ -209,12 +209,6 @@ function Topbar({ onOpenMenu }: { onOpenMenu: () => void }) {
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-[var(--border)] bg-white px-4 lg:px-6">
       <div className="flex items-center gap-3">
-        <button className="relative btn" onClick={() => nav('/alerts')} aria-label="Alerts">
-          {'🔔'}
-          {open > 0 && <span className="rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">{open}</span>}
-        </button>
-        <span className="text-sm text-slate-600">{session?.user}</span>
-        {session?.role && <RoleBadge role={session.role} />}
         <button
           type="button"
           onClick={onOpenMenu}
